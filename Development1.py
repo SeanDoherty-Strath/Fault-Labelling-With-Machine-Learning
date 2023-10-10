@@ -5,7 +5,9 @@ import plotly.express as px
 
 
 # COMPONENTS
-df = pd.read_csv('C:/Users/sdohe/Documents/4th Year Project/TestData.csv')
+#df = pd.read_csv('C:/Users/sdohe/Documents/4th Year Project/TestData.csv')
+df = pd.read_csv('C:/Users/sdohe/OneDrive/Documents/HPS_App/PinLocation/Scripts/TestData.csv')
+
 df2 = px.data.medals_long()
 app = Dash(__name__, external_stylesheets=[
            dbc.themes.SOLAR])  # always the same
