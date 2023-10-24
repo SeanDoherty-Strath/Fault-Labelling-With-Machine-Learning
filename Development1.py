@@ -12,9 +12,17 @@ df = pd.read_csv(
 df2 = px.data.medals_long()
 app = Dash(__name__, external_stylesheets=[
            dbc.themes.SOLAR])  # always the same
-mytext = dcc.Markdown(
-    children="# My Graph",
-)
+mytext = dcc.Markdown('''
+
+    # Fault Analysis
+'''
+                      )
+
+myTimes = dcc.Markdown('''
+
+
+'''
+                       )
 
 
 myGraph = dcc.Graph(figure={})
@@ -25,9 +33,16 @@ dropdown = dcc.Dropdown(
     clearable=False,
 )
 
+label_dropdown = dcc.Dropdown(
+    options=["Fault 1", "Fault 2", "Fault 3"],
+    value="Fault 2",  # initial value displayed when page first loads
+    clearable=False,
+)
+
 
 # LAYOUT
-app.layout = dbc.Container([mytext, myGraph, dropdown])
+app.layout = dbc.Container(
+    [mytext, myGraph, dropdown, label_dropdown, myTimes])
 
 
 @app.callback(
@@ -54,22 +69,26 @@ def update_graph(user_input):
     elif user_input == "Data 1, 2, + 3":
         fig = px.scatter_3d(df, x="Sensor 1", y="Sensor 2",
                             z="Sensor 3")
+        fig.update_scenes(dragmode='turntable')
 
     # returned objects are assigned to the component property of the Output
     return fig,
 
 
 @app.callback(
-    Output(mytext, component_property='children'),
-    Input(myGraph, component_property='clickData')
+    Output(myTimes, component_property='children'),
+    Input(myGraph, component_property='clickData'),
+    Input(label_dropdown, component_property="value"),
+    Input(myTimes, component_property='children'),
 )
-def display_selected_time(clickData):
+def display_selected_time(clickData, label, previous):
     if clickData is None:
-        return "Click on the graph to display the time."
+        return "Click on the graph to select a fault!"
 
     selected_time = clickData['points'][0]['x']
 
-    return "# Selected Time: " + selected_time,
+    new_line = f"\n- {label} on {selected_time}"
+    return previous + new_line
 
 
 # Run app
