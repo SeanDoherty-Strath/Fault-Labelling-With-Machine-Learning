@@ -24,21 +24,35 @@ column_names = df.columns.to_list()
 # Make a note of all the sensors
 sensors = column_names[3:]
 
-# COMPONENTS AND LAYOUT
+# COMPONENTS
+xAxis = dcc.Dropdown(
+    options=sensors,
+    value=sensors[0],
+    style={'display': 'block'}  # Initially visible
+)
+yAxis = dcc.Dropdown(
+    options=sensors,
+    value=sensors[1],
+    style={'display': 'block'}  # Initially visible
+)
+zAxis = dcc.Dropdown(
+    options=sensors,
+    value=sensors[2],
+    style={'display': 'block'}  # Initially visible
+)
+
+# LAYOUT
 app.layout = html.Div([
     html.H1("Sample Dash App with Centered Graph"),
 
     html.Div([
-        dcc.Graph(
-            id='mainGraph',
-            figure=px.line(df, x="sample", y="xmeas_3")
-        ),
+        xAxis, yAxis, zAxis
     ],
-        style={'width': '80%', 'display': 'inline-block', 'padding': '10px', 'text-align': 'center', 'margin': '0 auto'}),  # Center the graph
+        style={'width': '50%', 'display': 'inline-block', 'padding': '10px', }),
     dcc.Checklist(
         options=sensors,
         value=[sensors[0]]),
-], style={'display': 'flex', })
+], style={})
 
 
 # RUN APP
