@@ -2,20 +2,27 @@ from dash import Dash, dcc, Output, Input, html, State
 import dash_bootstrap_components as dbc
 import pandas as pd
 import plotly.express as px
-import pyreadr
 import numpy as np
 from plotly.subplots import make_subplots
 import plotly.graph_objs as go
 
+# import pyreadr
 
-# rdata_read = pyreadr.read_r(
-#    'D:/T_Eastmen_Data/archive/TEP_Faulty_Training.RData')
-rdata_read = pyreadr.read_r("C:/TenesseEastmenData/TEP_Faulty_Training.RData")
 
-all_df = rdata_read["faulty_training"]
-df = all_df.iloc[:300, :10]
-column_names = df.columns.to_list()
-sensors = column_names[3:]
+device = "laptop"
+
+if device == "PC":
+    rdata_read = pyreadr.read_r("D:/T_Eastmen_Data/archive/TEP_Faulty_Training.RData")
+    all_df = rdata_read["faulty_training"]
+    df = all_df.iloc[:300, :10]
+    column_names = df.columns.to_list()
+    sensors = column_names[3:]
+if device == "laptop":
+    df = pd.read_csv(
+        "C:/TenesseEastmenData/TenesseeEastemen_FaultyTraining_Subsection.csv"
+    )
+    column_names = df.columns.to_list()
+    sensors = column_names[3:]
 
 
 fig = px.line(df, x="sample", y="xmeas_1")
@@ -105,7 +112,7 @@ def updateTimeGraph(selected_values, clicks, xAxis, yAxis, zAxis, scatterLineCli
         zAxisDisplay = {"display": "block"}
         checkboxStyle = {"display": "none"}
         scatterLineButtonStyle = {"display": "block"}
-        graphStyle = {"height": 800}
+        graphStyle = {"height": 400}
     fig.update_layout(dragmode=False)
     return (
         f'Selected values: {", ".join(selected_values)}',
