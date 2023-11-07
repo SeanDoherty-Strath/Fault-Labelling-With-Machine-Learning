@@ -99,6 +99,7 @@ def updateTimeGraph(selected_values, clicks, xAxis, yAxis, zAxis, scatterLineCli
         checkboxStyle = {"display": "block"}
         scatterLineButtonStyle = {"display": "none"}
         graphStyle = {"height": 400}
+        fig.update_layout(dragmode=False)
     if clicks % 2 == 1:
         if scatterLineClicks % 2 == 0:
             fig = px.line_3d(df, x=xAxis, y=yAxis, z=zAxis)
@@ -113,7 +114,8 @@ def updateTimeGraph(selected_values, clicks, xAxis, yAxis, zAxis, scatterLineCli
         checkboxStyle = {"display": "none"}
         scatterLineButtonStyle = {"display": "block"}
         graphStyle = {"height": 400}
-    fig.update_layout(dragmode=False)
+        fig.update_layout(dragmode="zoom")
+
     return (
         f'Selected values: {", ".join(selected_values)}',
         fig,
