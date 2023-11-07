@@ -1,50 +1,60 @@
 import dash
-from dash import html, dcc, Input, Output
-import pandas as pd
-import numpy as np
-
-# Sample data for the graph
-np.random.seed(42)
-x = np.arange(100)
-y = np.random.randn(100)
+from dash import dcc, html, Input, Output
+import plotly.graph_objs as go
+from plotly.subplots import make_subplots
+import json
 
 app = dash.Dash(__name__)
 
+# Initialize empty selected box
+selected_box = None
+
 app.layout = html.Div([
     dcc.Graph(
-        id='scrollable-graph',
+        id='plot-container',
+        config={'scrollZoom': False},  # Disable zooming
+        figure=make_subplots(rows=1, cols=1)
     ),
-    dcc.RangeSlider(
-        id='x-range-slider',
-        min=0,
-        max=len(x) - 1,
-        step=1,
-        marks={i: str(i) for i in range(len(x))},
-        value=[0, len(x) - 1],
-    ),
+    dcc.Store(id='selected-box', data=selected_box)
 ])
 
 
 @app.callback(
-    Output('scrollable-graph', 'figure'),
-    Input('x-range-slider', 'value')
+    Output('plot-container', 'figure'),
+    Input('selected-box', 'data')
 )
-def update_x_range(selected_range):
-    start, end = selected_range
-    x_range = x[start:end+1]
-    y_range = y[start:end+1]
+def update_plot(selected_data):
+    # Create a figure with a scatter plot
+    fig = make_subplots(rows=1, cols=1)
+    fig.add_trace(go.Scatter(x=[1, 2, 3, 4], y=[
+                  10, 11, 12, 13], mode='lines', name='Plot'))
+    fig.update_layout(title='Plot', xaxis_title='X-Axis', yaxis_title='Y-Axis')
 
-    # Create a figure with the updated x-axis range
-    fig = {
-        'data': [{'x': x_range, 'y': y_range, 'type': 'scatter'}],
-        'layout': {
-            'xaxis': {'range': [x[start], x[end]]},
-            'yaxis': {'title': 'Value'},
-            'title': 'Horizontal Scrollable Graph'
-        }
-    }
+    # If a box is selected, color the selected section green
+    if selected_data:
+        x0, y0, x1, y1 = selected_data
+        fig.add_shape(
+            type='rect',
+            x0=x0, y0=y0, x1=x1, y1=y1,
+            line=dict(color='green', width=2),
+            fillcolor='green',
+            opacity=0.3
+        )
 
     return fig
+
+
+@app.callback(
+    Output('selected-box', 'data'),
+    Input('plot-container', 'relayoutData')
+)
+def select_box(relayoutData):
+    # Retrieve the coordinates of the selected box
+    if 'xaxis.range' in relayoutData:
+        x0, x1 = relayoutData['xaxis.range']
+        y0, y1 = relayoutData['yaxis.range']
+        return x0, y0, x1, y1
+    return None
 
 
 if __name__ == '__main__':
