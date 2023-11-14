@@ -4,6 +4,7 @@ import plotly.express as px
 from dash import Dash, dcc, Output, Input, html, State
 import dash_bootstrap_components as dbc
 import pandas as pd
+import pyreadr
 
 # Read in raw data (300 with 7 sensors)
 df = pd.read_csv(
@@ -11,6 +12,14 @@ df = pd.read_csv(
 )
 # Remove the first three columns (always the same for this dataset)
 df = df.iloc[:, 3:6]
+
+
+rdata_read = pyreadr.read_r(
+    'D:/T_Eastmen_Data/archive/TEP_Faulty_Training.RData')
+# Save all data in a panda dataframe
+df = rdata_read['faulty_training']
+df = df.iloc[:500000, 3:6]
+
 column_names = df.columns.to_list()
 
 # C0MPONENTS
@@ -21,7 +30,7 @@ myGraph = dcc.Graph(figure=fig)
 mytext0 = dcc.Markdown(children="Algorithm: ")
 dropdown_algorithm = dcc.Dropdown(
     options=['K Means', 'DBSCAN', 'Other'],
-    value='DBSCAN'
+    value='K Means'
 )
 
 mytext1 = dcc.Markdown(children="Number of clutsters: ")
