@@ -6,22 +6,19 @@ import dash_bootstrap_components as dbc
 import pandas as pd
 
 # Read in raw data (300 with 7 sensors)
-df = pd.read_csv(
-    "TenesseeEastemen_FaultyTraining_Subsection.csv"
-)
+df = pd.read_csv("TenesseeEastemen_FaultyTraining_Subsection.csv")
 # Remove the first three columns (always the same for this dataset)
 df = df.iloc[:, 3:6]
 column_names = df.columns.to_list()
 
 # C0MPONENTS
 
-fig = px.scatter_3d(df, x='xmeas_1', y='xmeas_2', z='xmeas_3')
+fig = px.scatter_3d(df, x="xmeas_1", y="xmeas_2", z="xmeas_3")
 myGraph = dcc.Graph(figure=fig)
 
 mytext0 = dcc.Markdown(children="Algorithm: ")
 dropdown_algorithm = dcc.Dropdown(
-    options=['K Means', 'DBSCAN', 'Other'],
-    value='DBSCAN'
+    options=["K Means", "DBSCAN", "Other"], value="K Means"
 )
 
 mytext1 = dcc.Markdown(children="Number of clutsters: ")
@@ -66,34 +63,66 @@ slider_minVal = dcc.RangeSlider(
 
 
 # LAYOUT
-app = Dash(__name__, external_stylesheets=[
-           dbc.themes.SOLAR])  # always the same
+app = Dash(__name__, external_stylesheets=[dbc.themes.SOLAR])  # always the same
 app.layout = dbc.Container(
     [
-        myGraph, mytext0, dropdown_algorithm, mytext5, slider_epsilon, mytext6, slider_minVal, mytext1, dropwdown_k, mytext2, dropwdown_x, mytext3, dropwdown_y, mytext4, dropwdown_z,
-
+        myGraph,
+        mytext0,
+        dropdown_algorithm,
+        mytext5,
+        slider_epsilon,
+        mytext6,
+        slider_minVal,
+        mytext1,
+        dropwdown_k,
+        mytext2,
+        dropwdown_x,
+        mytext3,
+        dropwdown_y,
+        mytext4,
+        dropwdown_z,
     ]
 )
 
 
 @app.callback(
     Output(myGraph, "figure"),
-    Input(dropwdown_k, 'value'),
-    Input(dropwdown_x, 'value'),
-    Input(dropwdown_y, 'value'),
-    Input(dropwdown_z, 'value'),
-    Input(dropdown_algorithm, 'value'),
-    Input(slider_epsilon, 'value'),
-    Input(slider_minVal, 'value')
+    Input(dropwdown_k, "value"),
+    Input(dropwdown_x, "value"),
+    Input(dropwdown_y, "value"),
+    Input(dropwdown_z, "value"),
+    Input(dropdown_algorithm, "value"),
+    Input(slider_epsilon, "value"),
+    Input(slider_minVal, "value"),
 )
 def updatePlot(k, xAxis, yAxis, zAxis, algorithm, eps, min):
     epsilon = eps[0]
     minVal = min[0]
-    colours = [['grey'], ['blue'], ['green'], ['orange'], [
-        'purple'], ['pink'], ['violet'], ['lavender']]
-    coloursContinuous = [['#FF0000'], ['#FF00B3'], ['#D500FF'], ['#7700FF'], ['#0900FF'], ['#00B3FF'], [
-        '#00FFDE'], ['#00FF66'], ['#80FF00'], ['#EFFF00'], ['#FFB300'], ['#FF4400'], ['#FF0000']]
-    if (algorithm == 'K Means'):
+    colours = [
+        ["blue"],
+        ["green"],
+        ["orange"],
+        ["purple"],
+        ["pink"],
+        ["violet"],
+        ["lavender"],
+    ]
+    coloursContinuous = [
+        ["#FF0000"],
+        ["#FF00B3"],
+        ["#D500FF"],
+        ["#7700FF"],
+        ["#0900FF"],
+        ["#00B3FF"],
+        ["#00FFDE"],
+        ["#00FF66"],
+        ["#80FF00"],
+        ["#EFFF00"],
+        ["#FFB300"],
+        ["#FF4400"],
+        ["#FF0000"],
+    ]
+    if algorithm == "K Means":
         # Create a KMeans instance
         kmeans = KMeans(n_clusters=k, n_init="auto")
         # Fit the model to the data
@@ -107,13 +136,18 @@ def updatePlot(k, xAxis, yAxis, zAxis, algorithm, eps, min):
             # Filter data based on cluster label
             cluster_df = df[labels == label]
             cluster_dataframes.append(cluster_df)
-        fig = px.scatter_3d(df_clusters, x=0, y=1,
-                            color_discrete_sequence=['black'])
+        fig = px.scatter_3d(df_clusters, x=0, y=1, color_discrete_sequence=["black"])
         for label in range(k):
-            fig.add_trace(px.scatter_3d(cluster_dataframes[label], x=xAxis, y=yAxis, z=zAxis,
-                                        color_discrete_sequence=colours[label]).data[0])
-    elif (algorithm == 'DBSCAN'):
-
+            fig.add_trace(
+                px.scatter_3d(
+                    cluster_dataframes[label],
+                    x=xAxis,
+                    y=yAxis,
+                    z=zAxis,
+                    color_discrete_sequence=colours[label],
+                ).data[0]
+            )
+    elif algorithm == "DBSCAN":
         clustering = DBSCAN(eps=epsilon, min_samples=minVal).fit(df)
         labels = clustering.labels_
         labels = labels
@@ -125,18 +159,23 @@ def updatePlot(k, xAxis, yAxis, zAxis, algorithm, eps, min):
             cluster_dataframes.append(cluster_df)
 
         fig = px.scatter_3d(
-            cluster_dataframes[0], x=xAxis, y=yAxis, z=zAxis, color=coloursContinuous[0])
+            cluster_dataframes[0], x=xAxis, y=yAxis, z=zAxis, color=coloursContinuous[0]
+        )
         for label in range(max(labels)):
-
-            fig.add_trace(px.scatter_3d(cluster_dataframes[label], x=xAxis, y=yAxis, z=zAxis,
-                                        color=coloursContinuous[label]).data[0])
+            fig.add_trace(
+                px.scatter_3d(
+                    cluster_dataframes[label],
+                    x=xAxis,
+                    y=yAxis,
+                    z=zAxis,
+                    color=coloursContinuous[label],
+                ).data[0]
+            )
 
     else:
         fig = px.scatter_3d()
 
-    return (
-        fig
-    )
+    return fig
 
 
 if __name__ == "__main__":
