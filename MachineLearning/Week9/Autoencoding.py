@@ -1,43 +1,49 @@
-import numpy as np
+
+# The purpose of this code is to practise implmeneinng an auto encoder.
+# I start with four inputs.  I have three hidden layers with 3, 2, and then 3 neurons
+# Their are then four outputs. These are a recreation of the four inputs.
+# We can verify their closesness by x' - x
+
+from sklearn.neural_network import MLPClassifier
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import MinMaxScaler
-from sklearn.neural_network import MLPRegressor
-import plotly.express as px
+from sklearn.metrics import accuracy_score
+from sklearn.datasets import load_iris
 
-# Generate some example data
-np.random.seed(42)
-X = np.random.rand(1000, 10)  # 1000 samples, each with 10 features
+# Take test data from iris
+# This has four inputs (to do with petal widths etc)
+iris = load_iris()
+X = iris.data
+X_prime = iris.data  # I've kept these seperate so it's clearer whats going on
 
-# Split the data into training and testing sets
-X_train, X_test = train_test_split(X, test_size=0.2, random_state=42)
+# Split into training and testing
+X_train, X_test, x_prime_train, x_prime_test = train_test_split(
+    X, X_prime, test_size=0.2, random_state=42)
 
-# Normalize the data using Min-Max scaling
-scaler = MinMaxScaler()
-X_train_scaled = scaler.fit_transform(X_train)
-X_test_scaled = scaler.transform(X_test)
+# Design small neural network
+# hidden_layer_sizes parameter determines # of hidden layers and neurons in each
+model = MLPClassifier(hidden_layer_sizes=(3, 2, 3),
+                      max_iter=1000, random_state=42)
 
-# Build the autoencoder model using scikit-learn's MLPRegressor
-# The hidden layer size determines the size of the encoded representation
-autoencoder = MLPRegressor(hidden_layer_sizes=(
-    5,), max_iter=1000, random_state=42)
+# Train model!
+model.fit(X, X_prime)
 
-# Train the autoencoder on the training data
-autoencoder.fit(X_train_scaled, X_train_scaled)
+# Make predictions test set
+x_prime_pred = model.predict(X_test)
 
-# Encode and decode the test data
-X_test_encoded = autoencoder.transform(X_test_scaled)
-X_test_decoded = autoencoder.inverse_transform(X_test_encoded)
+# Evaluate accuracy
+accuracy = accuracy_score(x_prime_test, x_prime_pred)
+print(f"Accuracy: {accuracy}")
 
-# Plot some examples of original and decoded data
-n_examples = 5
-fig, axes = px.subplots(nrows=2, ncols=n_examples, figsize=(10, 4))
+# SKIP THIS FOR NOW
+# Get the final biases and weights...
+# final_weights = model.coefs_
+# final_biases = model.intercepts_
 
-for i in range(n_examples):
-    axes[0, i].imshow(X_test_scaled[i].reshape(1, -1), cmap='gray')
-    axes[1, i].imshow(X_test_decoded[i].reshape(1, -1), cmap='gray')
+# Print them out!
+# print("Weights:")
+# for j, w in enumerate(final_weights):
+#    print(f"Layer {j}:\n{w}")
 
-axes[0, 0].set_ylabel('Original')
-axes[1, 0].set_ylabel('Decoded')
-
-px.tight_layout()
-px.show()
+# print("Biases:")
+# for j, b in enumerate(final_biases):
+#    print(f"Layer {j}:\n{b}")
