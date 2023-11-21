@@ -1,5 +1,5 @@
 import numpy as np
-import matplotlib.pyplot as plt
+import plotly.express as px
 from sklearn.cluster import DBSCAN
 from sklearn import datasets
 from sklearn.preprocessing import StandardScaler
@@ -13,19 +13,21 @@ df = StandardScaler().fit_transform(df)
 
 # Calculate the k-distance graph
 min = 5
-
 neigh = NearestNeighbors(n_neighbors=min)
 nbrs = neigh.fit(df)
 distances, indices = nbrs.kneighbors(df)
 distances = np.sort(distances, axis=0)
 distances = distances[:, 1]
+knee_point = np.argmax(np.diff(distances, 2)) + 2
+optimal_eps = distances[knee_point]
+
 
 # Plot the k-distance graph
-plt.plot(distances)
-plt.xlabel("Data Points")
-plt.ylabel("Epsilon")
-plt.title("K-distance Graph")
-plt.show()
+px.plot(distances)
+px.xlabel("Data Points")
+px.ylabel("Epsilon")
+px.title("K-distance Graph")
+px.show()
 
 # Find the knee point in the graph
 knee_point = np.argmax(np.diff(distances, 2)) + 2
@@ -49,6 +51,6 @@ dbscan = DBSCAN(eps=optimal_eps, min_samples=min)
 labels = dbscan.fit_predict(df)
 
 # Visualize the clusters
-plt.scatter(df[:, 0], df[:, 1], c=labels, cmap="viridis")
-plt.title("DBSCAN Clustering with Optimal Epsilon")
-plt.show()
+px.scatter(df[:, 0], df[:, 1], c=labels, cmap="viridis")
+px.title("DBSCAN Clustering with Optimal Epsilon")
+px.show()
