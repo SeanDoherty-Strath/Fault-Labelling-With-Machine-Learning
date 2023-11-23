@@ -1,42 +1,28 @@
-import dash
-from dash import dcc, html, Input, Output
-import plotly.express as px
 import pandas as pd
 
 
-# Create a sample DataFrame with multiple scatter plots
-data = pd.DataFrame({
-    'x': [1, 1, 2, 2, 3, 3, 4, 4, 5, 5],
-    'y': [1, 2, 1, 2, 1, 2, 1, 2, 1, 2],
-    'group': ['A', 'B', 'A', 'B', 'A', 'B', 'A', 'B', 'A', 'B'],
-})
+def normalize_dataframe(df):
+    """
+    Normalize all values in a DataFrame between 0 and 1 using Min-Max normalization.
 
-# Create a Dash app
-app = dash.Dash(__name__)
+    Parameters:
+    - df: pandas DataFrame
 
-app.layout = html.Div([
-    dcc.Graph(id='my-plot'),
-])
-
-
-@app.callback(
-    Output('my-plot', 'figure'),
-    Input('my-plot', 'relayoutData')
-)
-def update_plot(relayoutData):
-    # Create a scatter plot for each group
-    fig = px.scatter(data, x='x', y='y', color='group',
-                     symbol='group', width=600, height=400)
-
-    # Customize the layout
-    fig.update_layout(
-        title="Multiple Scatters on the Same Point",
-        xaxis=dict(title='X-axis'),
-        yaxis=dict(title='Y-axis'),
-    )
-
-    return fig
+    Returns:
+    - normalized_df: pandas DataFrame with normalized values
+    """
+    normalized_df = (df - df.min()) / (df.max() - df.min())
+    return normalized_df
 
 
-if __name__ == '__main__':
-    app.run_server(debug=True)
+# Example usage:
+# Assuming df is your DataFrame
+data = {
+    'Feature1': [10, 20, 15, 8, 25],
+    'Feature2': [5, 15, 8, 12, 18]
+}
+
+df = pd.DataFrame(data)
+
+normalized_df = normalize_dataframe(df)
+print(normalized_df)

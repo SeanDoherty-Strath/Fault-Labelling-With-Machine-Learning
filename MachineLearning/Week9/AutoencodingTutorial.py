@@ -48,6 +48,8 @@ x_train = x_train.reshape((len(x_train), np.prod(x_train.shape[1:])))
 x_test = x_test.reshape((len(x_test), np.prod(x_test.shape[1:])))
 print(x_train.shape)
 print(x_test.shape)
+
+print('X Train: ', x_train)
 # Now let's train our autoencoder for 50 epochs:
 
 autoencoder.fit(x_train, x_train,
