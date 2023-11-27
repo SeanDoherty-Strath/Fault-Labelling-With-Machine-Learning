@@ -31,13 +31,14 @@ inputOutputDimension = 52  # Our input and output is seven sensors
 input = keras.Input(shape=(inputOutputDimension,))
 
 # encoded representation of the input
-encoded = layers.Dense(encodingDimension, activation='relu')(input)
+encoded = layers.Dense(25, activation='relu')(input)
+encoded = layers.Dense(encodingDimension, activation='relu')(encoded)
 
 #  lossy reconstruction of the input
-decoded = layers.Dense(inputOutputDimension, activation='sigmoid')(
-    encoded)  # change to relu?
+decoded = layers.Dense(25, activation='relu')(encoded)
+decoded = layers.Dense(inputOutputDimension, activation='sigmoid')(decoded)
 
-
+print('Encoded:', encoded)
 #  maps an input to its encoded representation
 encoder = keras.Model(input, encoded)
 
@@ -56,6 +57,7 @@ decoder = keras.Model(encodedInput, decoderLayer(encodedInput))
 # Now train autoencoder to reconstruct sampled data
 
 autoencoder.compile(optimizer='adam', loss='binary_crossentropy')
+autoencoder.summary()
 
 #  prepare  input data.
 xTrain = df.iloc[:200, :]  # first 2 thirds for training
