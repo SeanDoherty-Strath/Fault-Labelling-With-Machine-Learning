@@ -16,7 +16,7 @@ rdata_read = pyreadr.read_r(
     'D:/T_Eastmen_Data/archive/TEP_Faulty_Training.RData')
 # Save all data in a panda dataframe
 df = rdata_read['faulty_training']
-df = df.iloc[:500000, 3:6]
+df = df.iloc[:1000, 3:6]
 
 column_names = df.columns.to_list()
 
