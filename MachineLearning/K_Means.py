@@ -4,13 +4,14 @@ import plotly.express as px
 from dash import Dash, dcc, Output, Input, html, State
 import dash_bootstrap_components as dbc
 import pandas as pd
+from pathlib import Path
+
 
 # Generate some sample data for clustering
-data = np.random.rand(100, 2)
+
 df = pd.read_csv(
-    "TenesseeEastemen_FaultyTraining_Subsection.csv"
+    "LatentSpace.csv"
 )
-df = df.iloc[:, 3:5]
 
 # column_names = df.columns.to_list()
 # sensors = column_names[3:]
@@ -34,31 +35,34 @@ for label in range(k):
     cluster_df = df[labels == label]
     cluster_dataframes.append(cluster_df)
 
-print('Cluster Dataframes')
-print(cluster_dataframes)
+trend = '2'
 
-colours = [['blue'], ['green'], ['orange']]
-
-fig = px.scatter(df_clusters, x=0, y=1, color_discrete_sequence=['red'])
-for label in range(k):
-    fig.add_trace(px.scatter(cluster_dataframes[label], x='xmeas_1', y='xmeas_2',
-                             color_discrete_sequence=colours[label]).data[0])
-
-
+print(cluster_dataframes[0])
+fig = px.line(cluster_dataframes[0], x='Unnamed: 0',
+              y=trend, color_discrete_sequence=['aqua'])
+fig.add_trace(px.line(cluster_dataframes[1], x='Unnamed: 0',
+              y=trend, color_discrete_sequence=['red']).data[0])
+fig.add_trace(px.line(cluster_dataframes[2], x='Unnamed: 0',
+              y=trend, color_discrete_sequence=['green']).data[0])
 myGraph = dcc.Graph(figure=fig)
 
-'''
-fig = px.line(df, x="sample", y="xmeas_1")
-fig.update_layout(dragmode=False)
-myGraph = dcc.Graph(figure=fig)
-'''
+
+fig2 = px.scatter_3d(
+    cluster_dataframes[0], x='1', y='2', z='3', color_discrete_sequence=['aqua'])
+fig2.add_trace(px.scatter_3d(
+    cluster_dataframes[1], x='1', y='2', z='3', color_discrete_sequence=['red']).data[0])
+fig2.add_trace(px.scatter_3d(
+    cluster_dataframes[2], x='1', y='2', z='3', color_discrete_sequence=['green']).data[0])
+
+myGraph2 = dcc.Graph(figure=fig2)
 
 # LAYOUT
 app = Dash(__name__, external_stylesheets=[
            dbc.themes.SOLAR])  # always the same
 app.layout = dbc.Container(
     [
-        myGraph
+        myGraph,
+        myGraph2
     ]
 )
 

@@ -7,22 +7,31 @@ import pandas as pd
 import pyreadr
 from sklearn.preprocessing import StandardScaler
 from sklearn.neighbors import NearestNeighbors
+from pathlib import Path
 
 # Read in raw data (300 with 7 sensors)
+# df = pd.read_csv(
+#     "TenesseeEastemen_FaultyTraining_Subsection.csv"
+# )
+# # Remove the first three columns (always the same for this dataset)
+# df = df.iloc[:, 3:8]
+# column_names = df.columns.to_list()
+
+# rdata_read = pyreadr.read_r(
+#     "D:/T_Eastmen_Data/archive/TEP_Faulty_Training.RData")
+# all_df = rdata_read["faulty_training"]
+# df = all_df.iloc[:1000, 3:10]
+# column_names = df.columns.to_list()
+
 df = pd.read_csv(
-    "TenesseeEastemen_FaultyTraining_Subsection.csv"
+    "LatentSpace.csv"
 )
 # Remove the first three columns (always the same for this dataset)
-df = df.iloc[:, 3:8]
-column_names = df.columns.to_list()
-
-rdata_read = pyreadr.read_r(
-    "D:/T_Eastmen_Data/archive/TEP_Faulty_Training.RData")
-all_df = rdata_read["faulty_training"]
-df = all_df.iloc[:1000, 3:10]
 column_names = df.columns.to_list()
 
 # C0MPONENTS
+
+cluster_dataframes = []
 
 fig = {}
 myGraph = dcc.Graph(figure=fig)
@@ -66,15 +75,25 @@ slider_minVal = dcc.RangeSlider(
 )
 
 
+text = dcc.Markdown(children="")
 # LAYOUT
 app = Dash(__name__, external_stylesheets=[
            dbc.themes.SOLAR])  # always the same
 app.layout = dbc.Container(
     [
-        myGraph, mytext0, dropdown_algorithm, mytext6, slider_minVal, mytext1, dropwdown_k, mytext2, dropwdown_x, mytext3, dropwdown_y, mytext4, dropwdown_z,
+        text, myGraph, mytext0, dropdown_algorithm, mytext6, slider_minVal, mytext1, dropwdown_k, mytext2, dropwdown_x, mytext3, dropwdown_y, mytext4, dropwdown_z, html.Button(
+            title='Export CSV', id='myButton'),
 
     ]
 )
+
+
+@app.callback(
+    Output(text, 'children'),
+    Input('myButton', 'n_clicks')
+)
+def exportCSV(n_clicks):
+    return n_clicks
 
 
 @app.callback(
@@ -110,7 +129,7 @@ def updatePlot(k, xAxis, yAxis, zAxis, algorithm,  min):
 
         fig = px.scatter_3d(df_clusters, x=0, y=1, z=2,
                             color_discrete_sequence=['black'])
-        for label in range(k):
+        for label in range(0, k):
             fig.add_trace(px.scatter_3d(cluster_dataframes[label], x=xAxis, y=yAxis, z=zAxis,
                                         color_discrete_sequence=colours[label]).data[0])
     elif (algorithm == 'DBSCAN'):
@@ -142,6 +161,10 @@ def updatePlot(k, xAxis, yAxis, zAxis, algorithm,  min):
             print('Colouring Label: ', label)
             fig.add_trace(px.scatter_3d(cluster_dataframes[label], x=xAxis, y=yAxis, z=zAxis,
                                         color_discrete_sequence=coloursContinuous[label]).data[0])
+
+        clustersDF = pd.DataFrame(cluster_dataframes)
+        filepath = Path('./Clusters.csv')
+        clustersDF.to_csv(filepath)
 
     else:
         fig = px.scatter_3d()

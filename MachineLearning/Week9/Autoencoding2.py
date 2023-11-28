@@ -6,7 +6,7 @@ from keras import layers
 import pandas as pd
 import pyreadr
 import math
-
+from pathlib import Path
 
 dataSize = 10000  # The amount of time values used
 
@@ -125,7 +125,7 @@ plt.show()
 encoded = keras.Model(inputs=autoencoder.input, outputs=encoder)
 
 # Get the latent space representation for the input data
-latent_space = encoded.predict(xTest)
+latent_space = encoded.predict(df)
 
 print('Latent space', latent_space)
 print('Latent space size: ', np.shape(latent_space))
@@ -144,6 +144,11 @@ for i in range(0, encoding_dimension):
     text = 'Latent space', i
     print(text, latent_space[:, i])
 
+
+latentSpaceDF = pd.DataFrame(latent_space)
+filepath = Path('./LatentSpace.csv')
+
+latentSpaceDF.to_csv(filepath)
 
 ax.set_xlabel('Latent Dimension 1')
 ax.set_ylabel('Latent Dimension 2')
