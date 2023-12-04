@@ -8,8 +8,6 @@ import pyreadr
 import math
 from pathlib import Path
 
-dataSize = 10000  # The amount of time values used
-
 
 def normalize_dataframe(df):
     normalized_df = (df - df.min()) / (df.max() - df.min())
@@ -23,7 +21,7 @@ df = df.iloc[:, 3:]
 rdata_read = pyreadr.read_r(
     "D:/T_Eastmen_Data/archive/TEP_Faulty_Training.RData")
 all_df = rdata_read["faulty_training"]
-df = all_df.iloc[:dataSize, 3:]
+df = all_df.iloc[:, 3:]
 
 
 df = normalize_dataframe(df)
@@ -56,8 +54,10 @@ autoencoder.compile(optimizer='adam', loss='mse')
 
 
 #  prepare  input data.
-xTrain = df.iloc[:math.floor(dataSize*2/3), :]  # first 2 thirds for training
-xTest = df.iloc[math.ceil(dataSize*2/3):, :]  # final third for testing
+# xTrain = df.iloc[:math.floor(dataSize*2/3), :]  # first 2 thirds for training
+# xTest = df.iloc[math.ceil(dataSize*2/3):, :]  # final third for testing
+xTrain = df.iloc[:4000000, :]  # first 4/5
+xTest = df.iloc[4000000:, :]  # final 4/5
 
 print('xTest size', np.shape(xTest))
 
