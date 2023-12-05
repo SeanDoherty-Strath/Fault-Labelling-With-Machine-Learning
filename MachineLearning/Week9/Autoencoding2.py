@@ -8,24 +8,22 @@ import pyreadr
 import math
 from pathlib import Path
 
+dataSize = 50000
+
 
 def normalize_dataframe(df):
     normalized_df = (df - df.min()) / (df.max() - df.min())
     return normalized_df
 
 
-df = pd.read_csv(
-    "TenesseeEastemen_FaultyTraining_Subsection.csv")
-df = df.iloc[:, 3:]
-
 rdata_read = pyreadr.read_r(
     "D:/T_Eastmen_Data/archive/TEP_Faulty_Training.RData")
 all_df = rdata_read["faulty_training"]
-df = all_df.iloc[:, 3:]
-
-
+df = all_df.iloc[:dataSize, 3:]
 df = normalize_dataframe(df)
 
+print(df.shape)
+print(df)
 
 # Define the dimensions
 input_output_dimension = 52
@@ -54,10 +52,9 @@ autoencoder.compile(optimizer='adam', loss='mse')
 
 
 #  prepare  input data.
-# xTrain = df.iloc[:math.floor(dataSize*2/3), :]  # first 2 thirds for training
-# xTest = df.iloc[math.ceil(dataSize*2/3):, :]  # final third for testing
-xTrain = df.iloc[:4000000, :]  # first 4/5
-xTest = df.iloc[4000000:, :]  # final 4/5
+xTrain = df.iloc[:math.floor(dataSize*4/5), :]  # first 2 thirds for training
+xTest = df.iloc[math.ceil(dataSize*4/5):, :]  # final third for testing
+
 
 print('xTest size', np.shape(xTest))
 
@@ -74,7 +71,7 @@ class LossHistory(keras.callbacks.Callback):
 
 
 # Train the data: note - get more info on batchsize
-autoencoder.fit(xTrain, xTrain, epochs=50,
+autoencoder.fit(xTrain, xTrain, epochs=200,
                 shuffle=True, validation_data=(xTest, xTest), callbacks=[LossHistory()])
 
 plt.plot(epochs, losses, label='Training Loss')
