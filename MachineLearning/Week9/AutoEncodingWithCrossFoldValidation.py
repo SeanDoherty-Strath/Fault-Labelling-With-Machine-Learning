@@ -12,10 +12,10 @@ from sklearn.metrics import mean_absolute_error
 
 def normalize_dataframe(df):
     normalized_df = pd.DataFrame()
-    for col in df.columns:
+    for col in df.columns:  # Ignore the first four columns
         if df.columns.get_loc(col) < 4:
             normalized_df[col] = df[col]
-        else:
+        else:  # Noramlize everything else between 0 and 1
             normalized_col = (df[col] - df[col].min()) / \
                 (df[col].max() - df[col].min())
             normalized_df[col] = normalized_col
@@ -30,6 +30,7 @@ all_df = normalize_dataframe(all_df)
 df = all_df.iloc[:, 4:]
 print(df)
 print(df.shape)
+# 2000 x 52
 
 # Define the dimensions
 input_output_dimension = 52
@@ -64,8 +65,11 @@ kf = KFold(n_splits=numFolds, shuffle=True, random_state=42)
 fold_metrics = []
 
 # Record losses and epochs during training
+num_epochs = 100
 epochs = []
 losses = []
+
+# Callback for graphing epochs
 
 
 class LossHistory(keras.callbacks.Callback):
@@ -74,7 +78,7 @@ class LossHistory(keras.callbacks.Callback):
         losses.append(logs['loss'])
 
 
-plt.figure(figsize=(20, 4))
+# TRAINING
 for fold, (train_index, val_index) in enumerate(kf.split(df)):
     print(f"Training on fold {fold + 1}/{numFolds}")
 
@@ -82,14 +86,7 @@ for fold, (train_index, val_index) in enumerate(kf.split(df)):
 
     # Train the autoencoder model on the current fold
     history = autoencoder.fit(
-        xTrain, xTrain, epochs=100, batch_size=20, validation_data=(xTest, xTest), verbose=2, callbacks=[LossHistory()])
-
-    ax = plt.subplot(1, numFolds, fold+1)
-    plt.plot(epochs, losses, label='Training Loss')
-    plt.xlabel('Epochs')
-    plt.ylabel('Loss')
-    epochs = []
-    losses = []
+        xTrain, xTrain, epochs=num_epochs, batch_size=20, validation_data=(xTest, xTest), verbose=2, callbacks=[LossHistory()])
 
     # Evaluate the model on the validation set and store the metrics
     val_loss = autoencoder.evaluate(xTest, xTest, verbose=0)
@@ -97,12 +94,22 @@ for fold, (train_index, val_index) in enumerate(kf.split(df)):
 
 average_loss = np.mean(fold_metrics)
 print(f"Average validation loss across {numFolds} folds: {average_loss}")
+
+plt.plot(epochs[:num_epochs], losses[:num_epochs], label='Training Loss')
+plt.xlabel('Epochs')
+plt.ylabel('Loss')
 plt.show()
 
 
-# VISUALISE INPUT AGAINST RECREATION
-predictedData = autoencoder.predict(df)
-mae = mean_absolute_error(df, predictedData)  # mean absolute error
+# TEST THE DATA ON THE TENEESSE EASTMENT TEST SET
+
+testDF = pd.read_csv(
+    "UpdatedTestData.csv")
+testDF = normalize_dataframe(testDF)
+testDF = testDF.iloc[:, 4:]
+
+predictedData = autoencoder.predict(testDF)
+mae = mean_absolute_error(testDF, predictedData)  # mean absolute error
 print('Mean absolte error: ', mae)
 
 # Option 2: Time series
@@ -111,7 +118,7 @@ plt.figure(figsize=(20, 4))
 for i in range(5):
     # Display original
     ax = plt.subplot(2, 5, i + 1)
-    plt.plot(df.iloc[:500, i])
+    plt.plot(testDF.iloc[:960, i])
     plt.ylim(0, 1)
 
     title = 'xmeas' + str(i)
@@ -119,6 +126,6 @@ for i in range(5):
 
     # Display reconstruction
     ax = plt.subplot(2, 5, i + 1 + 5)
-    plt.plot(predictedData[:500, i])
+    plt.plot(predictedData[:960, i])
     plt.ylim(0, 1)
 plt.show()
