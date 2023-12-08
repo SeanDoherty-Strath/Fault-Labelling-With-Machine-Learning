@@ -15,15 +15,42 @@ dataSize = 1000
 
 
 def normalize_dataframe(df):
-    normalized_df = (df - df.min()) / (df.max() - df.min())
+    normalized_df = pd.DataFrame()
+    for col in df.columns:
+        if df.columns.get_loc(col) < 4:
+            normalized_df[col] = df[col]
+        else:
+            normalized_col = (df[col] - df[col].min()) / \
+                (df[col].max() - df[col].min())
+            normalized_df[col] = normalized_col
+
     return normalized_df
 
 
-rdata_read = pyreadr.read_r(
-    "D:/T_Eastmen_Data/archive/TEP_Faulty_Training.RData")
-all_df = rdata_read["faulty_training"]
-df = all_df.iloc[:dataSize, 3:19]
+# rdata_read = pyreadr.read_r(
+#     "D:/T_Eastmen_Data/archive/TEP_Faulty_Training.RData")
+# all_df = rdata_read["faulty_training"]
+# df = all_df.iloc[:dataSize, 3:19]
+# df = normalize_dataframe(df)
+
+df = pd.read_csv(
+    "UpdatedData.csv")
+print(df)
 df = normalize_dataframe(df)
+
+
+ax = plt.plot(df.iloc[:, 0])
+plt.show()
+ax = plt.plot(df.iloc[:, 1])
+plt.show()
+ax = plt.plot(df.iloc[:, 2])
+plt.show()
+ax = plt.plot(df.iloc[:, 3])
+plt.show()
+plt.plot(df.iloc[:, 4])
+plt.show()
+plt.plot(df.iloc[:, 5])
+plt.show()
 
 
 # Define the dimensions

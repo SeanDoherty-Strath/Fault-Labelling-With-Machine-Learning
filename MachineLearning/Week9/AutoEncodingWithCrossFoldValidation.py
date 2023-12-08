@@ -1,34 +1,35 @@
 import matplotlib.pyplot as plt
 import numpy as np
-from keras.datasets import mnist
 import keras
 from keras import layers
 import pandas as pd
-import pyreadr
 from pathlib import Path
 from sklearn.model_selection import KFold
 from sklearn.metrics import mean_absolute_error
 
-# Read in data
-rdata_read = pyreadr.read_r(
-    "D:/T_Eastmen_Data/archive/TEP_Faulty_Training.RData")
-
-# Create a Pandas data frame
-all_df = rdata_read["faulty_training"]
-
-# Reduce data
-n = 10000  # Number of time values
-df = all_df.iloc[:n, 3:]
-
-# Normalize data
+# Normalise data
 
 
 def normalize_dataframe(df):
-    normalized_df = (df - df.min()) / (df.max() - df.min())
+    normalized_df = pd.DataFrame()
+    for col in df.columns:
+        if df.columns.get_loc(col) < 4:
+            normalized_df[col] = df[col]
+        else:
+            normalized_col = (df[col] - df[col].min()) / \
+                (df[col].max() - df[col].min())
+            normalized_df[col] = normalized_col
+
     return normalized_df
 
 
-df = normalize_dataframe(df)
+# Read in data
+all_df = pd.read_csv(
+    "UpdatedData.csv")
+all_df = normalize_dataframe(all_df)
+df = all_df.iloc[:, 4:]
+print(df)
+print(df.shape)
 
 # Define the dimensions
 input_output_dimension = 52
@@ -42,10 +43,10 @@ input_layer = keras.Input(shape=(input_output_dimension,))
 # ENCODER
 encoder = layers.Dense(hidden_layer_dimension, activation='relu',)(input_layer)
 # encoder = layers.Dropout(0.2)(encoder)
-encoder = layers.Dense(encoding_dimension, activation='relu')(encoder)
+encoder = layers.Dense(20, activation='relu')(encoder)
 
 # DECODER
-decoder = layers.Dense(25, activation='relu')(encoder)
+decoder = layers.Dense(hidden_layer_dimension, activation='relu')(encoder)
 # decoder = layers.Dropout(0.2)(decoder)
 decoder = layers.Dense(input_output_dimension, activation='sigmoid')(decoder)
 
@@ -53,11 +54,11 @@ decoder = layers.Dense(input_output_dimension, activation='sigmoid')(decoder)
 autoencoder = keras.Model(inputs=input_layer, outputs=decoder)
 
 # COMPILE MODEL
-# autoencoder.compile(optimizer='adam', loss='binary_crossentropy')
-autoencoder.compile(optimizer='adam', loss='mse')
+autoencoder.compile(optimizer='adam', loss='binary_crossentropy')
+# autoencoder.compile(optimizer='adam', loss='mse')
 
 # K FOLD VALIDATION
-numFolds = 2
+numFolds = 5
 kf = KFold(n_splits=numFolds, shuffle=True, random_state=42)
 # store performance metrics for each fold
 fold_metrics = []
@@ -81,7 +82,7 @@ for fold, (train_index, val_index) in enumerate(kf.split(df)):
 
     # Train the autoencoder model on the current fold
     history = autoencoder.fit(
-        xTrain, xTrain, epochs=1000, validation_data=(xTest, xTest), verbose=2, callbacks=[LossHistory()])
+        xTrain, xTrain, epochs=100, batch_size=20, validation_data=(xTest, xTest), verbose=2, callbacks=[LossHistory()])
 
     ax = plt.subplot(1, numFolds, fold+1)
     plt.plot(epochs, losses, label='Training Loss')
@@ -99,7 +100,7 @@ print(f"Average validation loss across {numFolds} folds: {average_loss}")
 plt.show()
 
 
-# VISUAL INPUT AGAINST RECREATION
+# VISUALISE INPUT AGAINST RECREATION
 predictedData = autoencoder.predict(df)
 mae = mean_absolute_error(df, predictedData)  # mean absolute error
 print('Mean absolte error: ', mae)
@@ -110,7 +111,7 @@ plt.figure(figsize=(20, 4))
 for i in range(5):
     # Display original
     ax = plt.subplot(2, 5, i + 1)
-    plt.plot(df.iloc[:, i])
+    plt.plot(df.iloc[:500, i])
     plt.ylim(0, 1)
 
     title = 'xmeas' + str(i)
@@ -118,6 +119,6 @@ for i in range(5):
 
     # Display reconstruction
     ax = plt.subplot(2, 5, i + 1 + 5)
-    plt.plot(predictedData[:, i])
+    plt.plot(predictedData[:500, i])
     plt.ylim(0, 1)
 plt.show()
