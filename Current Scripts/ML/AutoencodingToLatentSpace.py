@@ -1,13 +1,14 @@
 import matplotlib.pyplot as plt
 import numpy as np
+from keras.datasets import mnist
 import keras
 from keras import layers
 import pandas as pd
+import pyreadr
+import math
 from pathlib import Path
-from sklearn.model_selection import KFold
+from sklearn.metrics import accuracy_score
 from sklearn.metrics import mean_absolute_error
-
-# Normalise data
 
 
 def normalize_dataframe(df):
@@ -25,12 +26,11 @@ def normalize_dataframe(df):
 
 # Read in data
 all_df = pd.read_csv(
-    "UpdatedData.csv")
+    "Data/UpdatedData.csv")
 all_df = normalize_dataframe(all_df)
 df = all_df.iloc[:, 4:]
-print(df)
 print(df.shape)
-# 2000 x 52
+
 
 # Define the dimensions
 input_output_dimension = 52
@@ -58,18 +58,18 @@ autoencoder = keras.Model(inputs=input_layer, outputs=decoder)
 autoencoder.compile(optimizer='adam', loss='binary_crossentropy')
 # autoencoder.compile(optimizer='adam', loss='mse')
 
-# K FOLD VALIDATION
-numFolds = 5
-kf = KFold(n_splits=numFolds, shuffle=True, random_state=42)
-# store performance metrics for each fold
-fold_metrics = []
+# Print the model summary
+# autoencoder.summary()
 
-# Record losses and epochs during training
-num_epochs = 100
-epochs = []
+#  prepare  input data.
+xTrain = df.iloc[:16000, :]  # first 4/5 for training
+xTest = df.iloc[16000:, :]  # final 1/5  for testing
+
+
 losses = []
+epochs = []
 
-# Callback for graphing epochs
+# Callback to record loss and epochs during training
 
 
 class LossHistory(keras.callbacks.Callback):
@@ -78,33 +78,21 @@ class LossHistory(keras.callbacks.Callback):
         losses.append(logs['loss'])
 
 
-# TRAINING
-for fold, (train_index, val_index) in enumerate(kf.split(df)):
-    print(f"Training on fold {fold + 1}/{numFolds}")
+# Train the data: note - get more info on batchsize
+autoencoder.fit(xTrain, xTrain, epochs=1000,
+                shuffle=True, validation_data=(xTest, xTest), callbacks=[LossHistory()])
 
-    xTrain, xTest = df.iloc[train_index], df.iloc[val_index]
-
-    # Train the autoencoder model on the current fold
-    history = autoencoder.fit(
-        xTrain, xTrain, epochs=num_epochs, batch_size=20, validation_data=(xTest, xTest), verbose=2, callbacks=[LossHistory()])
-
-    # Evaluate the model on the validation set and store the metrics
-    val_loss = autoencoder.evaluate(xTest, xTest, verbose=0)
-    fold_metrics.append(val_loss)
-
-average_loss = np.mean(fold_metrics)
-print(f"Average validation loss across {numFolds} folds: {average_loss}")
-
-plt.plot(epochs[:num_epochs], losses[:num_epochs], label='Training Loss')
+plt.plot(epochs, losses, label='Training Loss')
 plt.xlabel('Epochs')
 plt.ylabel('Loss')
+plt.title('Loss vs. Epochs')
+plt.legend()
 plt.show()
 
 
-# TEST THE DATA ON THE TENEESSE EASTMENT TEST SET
-
+# TEST THE DATA ON THE TEST SET
 testDF = pd.read_csv(
-    "UpdatedTestData.csv")
+    "Data/UpdatedTestData.csv")
 testDF = normalize_dataframe(testDF)
 testDF = testDF.iloc[:, 4:]
 
@@ -129,3 +117,42 @@ for i in range(5):
     plt.plot(predictedData[:960, i])
     plt.ylim(0, 1)
 plt.show()
+
+
+# CONVERT TO LATENT SPACE
+# # encoder = keras.Model(inputs=autoencoder.input,
+# #     outputs=autoencoder.get_layer('encoder_1').output)
+# encoded = keras.Model(inputs=autoencoder.input, outputs=encoder)
+
+# # Get the latent space representation for the input data
+# latent_space = encoded.predict(df)
+
+# print('Latent space', latent_space)
+# print('Latent space size: ', np.shape(latent_space))
+
+
+# # Create a 3D plot
+# fig = plt.figure()
+# ax = fig.add_subplot(111, projection='3d')
+
+# # Scatter plot the points in the latent space
+# # ax.scatter(latent_space[:, 3], latent_space[:, 4],
+# #           latent_space[:, 5], marker='o', s=10, c='r')
+
+
+# for i in range(0, encoding_dimension):
+#     text = 'Latent space', i
+#     print(text, latent_space[:, i])
+
+
+# latentSpaceDF = pd.DataFrame(latent_space)
+# filepath = Path('./LatentSpace.csv')
+
+# latentSpaceDF.to_csv(filepath)
+
+# ax.set_xlabel('Latent Dimension 1')
+# ax.set_ylabel('Latent Dimension 2')
+# ax.set_zlabel('Latent Dimension 3')
+
+# plt.title('Latent Space Visualization')
+# plt.show()

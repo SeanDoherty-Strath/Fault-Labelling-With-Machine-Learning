@@ -7,16 +7,10 @@ import pandas as pd
 import pyreadr
 
 # Read in raw data (300 with 7 sensors)
-df = pd.read_csv("TenesseeEastemen_FaultyTraining_Subsection.csv")
+df = pd.read_csv("Data/TenesseeEastemen_FaultyTraining_Subsection.csv")
 # Remove the first three columns (always the same for this dataset)
-df = df.iloc[:, 3:6]
+df = df.iloc[:, 3:]
 
-
-rdata_read = pyreadr.read_r(
-    'D:/T_Eastmen_Data/archive/TEP_Faulty_Training.RData')
-# Save all data in a panda dataframe
-df = rdata_read['faulty_training']
-df = df.iloc[:1000, 3:6]
 
 column_names = df.columns.to_list()
 

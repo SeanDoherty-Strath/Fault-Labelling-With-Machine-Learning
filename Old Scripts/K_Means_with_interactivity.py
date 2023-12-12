@@ -24,7 +24,7 @@ from pathlib import Path
 # column_names = df.columns.to_list()
 
 df = pd.read_csv(
-    "LatentSpace.csv"
+    "Data/LatentSpace.csv"
 )
 # Remove the first three columns (always the same for this dataset)
 column_names = df.columns.to_list()

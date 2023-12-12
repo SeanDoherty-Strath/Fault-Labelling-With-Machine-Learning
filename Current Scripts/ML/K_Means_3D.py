@@ -7,7 +7,7 @@ import pandas as pd
 
 
 df = pd.read_csv(
-    "TenesseeEastemen_FaultyTraining_Subsection.csv"
+    "Data/TenesseeEastemen_FaultyTraining_Subsection.csv"
 )
 df = df.iloc[:, 3:]
 
