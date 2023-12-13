@@ -35,7 +35,7 @@ print(df.shape)
 # Define the dimensions
 input_output_dimension = 52
 hidden_layer_dimension = 25
-encoding_dimension = 5
+encoding_dimension = 6
 
 # INPUT LAYER
 input_layer = keras.Input(shape=(input_output_dimension,))
