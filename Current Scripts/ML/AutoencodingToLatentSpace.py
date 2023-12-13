@@ -35,7 +35,7 @@ print(df.shape)
 # Define the dimensions
 input_output_dimension = 52
 hidden_layer_dimension = 25
-encoding_dimension = 12
+encoding_dimension = 5
 
 # INPUT LAYER
 input_layer = keras.Input(shape=(input_output_dimension,))
@@ -44,7 +44,7 @@ input_layer = keras.Input(shape=(input_output_dimension,))
 # ENCODER
 encoder = layers.Dense(hidden_layer_dimension, activation='relu',)(input_layer)
 # encoder = layers.Dropout(0.2)(encoder)
-encoder = layers.Dense(20, activation='relu')(encoder)
+encoder = layers.Dense(encoding_dimension, activation='relu')(encoder)
 
 # DECODER
 decoder = layers.Dense(hidden_layer_dimension, activation='relu')(encoder)
@@ -79,7 +79,7 @@ class LossHistory(keras.callbacks.Callback):
 
 
 # Train the data: note - get more info on batchsize
-autoencoder.fit(xTrain, xTrain, epochs=1000,
+autoencoder.fit(xTrain, xTrain, epochs=100,
                 shuffle=True, validation_data=(xTest, xTest), callbacks=[LossHistory()])
 
 plt.plot(epochs, losses, label='Training Loss')
