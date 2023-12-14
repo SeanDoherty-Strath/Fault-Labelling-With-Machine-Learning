@@ -35,18 +35,19 @@ print(df.shape)
 # Define the dimensions
 input_output_dimension = 52
 hidden_layer_dimension = 25
-encoding_dimension = 6
+encoding_dimension = 12
 
 # INPUT LAYER
 input_layer = keras.Input(shape=(input_output_dimension,))
-# input_layer = layers.Dropout(0.2)(input_layer)
+input_layer = layers.Dropout(0.1)(input_layer)
 
 # ENCODER
 encoder = layers.Dense(hidden_layer_dimension, activation='relu',)(input_layer)
-# encoder = layers.Dropout(0.2)(encoder)
+encoder = layers.Dropout(0.1)(encoder)
 encoder = layers.Dense(encoding_dimension, activation='relu')(encoder)
 
 # DECODER
+
 decoder = layers.Dense(hidden_layer_dimension, activation='relu')(encoder)
 # decoder = layers.Dropout(0.2)(decoder)
 decoder = layers.Dense(input_output_dimension, activation='sigmoid')(decoder)
