@@ -79,7 +79,7 @@ class LossHistory(keras.callbacks.Callback):
 
 
 # Train the data: note - get more info on batchsize
-autoencoder.fit(xTrain, xTrain, epochs=1000,
+autoencoder.fit(xTrain, xTrain, epochs=2000,
                 shuffle=True, validation_data=(xTest, xTest), callbacks=[LossHistory()])
 
 plt.plot(epochs, losses, label='Training Loss')

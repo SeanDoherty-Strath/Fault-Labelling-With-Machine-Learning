@@ -139,7 +139,7 @@ def updateTimeGraph(selected_values, clicks, xAxis, yAxis, zAxis, scatterLineCli
         checkboxStyle = {"display": "none"}
         scatterLineButtonStyle = {"display": "block"}
         graphStyle = {"height": 400}
-        fig.update_layout(dragmode='zoom')
+        
 
     return (
         f'Selected values: {", ".join(selected_values)}',
