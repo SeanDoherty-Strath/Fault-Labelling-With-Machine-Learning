@@ -39,14 +39,15 @@ encoding_dimension = 12
 
 # INPUT LAYER
 input_layer = keras.Input(shape=(input_output_dimension,))
-# input_layer = layers.Dropout(0.2)(input_layer)
+input_layer = layers.Dropout(0.1)(input_layer)
 
 # ENCODER
 encoder = layers.Dense(hidden_layer_dimension, activation='relu',)(input_layer)
-# encoder = layers.Dropout(0.2)(encoder)
-encoder = layers.Dense(20, activation='relu')(encoder)
+encoder = layers.Dropout(0.1)(encoder)
+encoder = layers.Dense(encoding_dimension, activation='relu')(encoder)
 
 # DECODER
+
 decoder = layers.Dense(hidden_layer_dimension, activation='relu')(encoder)
 # decoder = layers.Dropout(0.2)(decoder)
 decoder = layers.Dense(input_output_dimension, activation='sigmoid')(decoder)
@@ -79,7 +80,9 @@ class LossHistory(keras.callbacks.Callback):
 
 
 # Train the data: note - get more info on batchsize
-autoencoder.fit(xTrain, xTrain, epochs=2000,
+
+autoencoder.fit(xTrain, xTrain, epochs=100,
+
                 shuffle=True, validation_data=(xTest, xTest), callbacks=[LossHistory()])
 
 plt.plot(epochs, losses, label='Training Loss')
