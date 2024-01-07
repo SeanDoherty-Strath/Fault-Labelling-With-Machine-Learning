@@ -10,7 +10,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.neighbors import NearestNeighbors
 
 
-df = pd.read_csv("Data/TenesseeEastemen_FaultyTraining_Subsection.csv")
+df = pd.read_csv("Data/dTenesseeEastemen_FaultyTraining_Subsection.csv")
 df = df.iloc[:, 3:6]
 
 # To INFER the number of important components:
