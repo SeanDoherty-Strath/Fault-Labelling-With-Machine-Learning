@@ -1,159 +1,222 @@
-
-# NOTE
-# This file, datalabelling 1, has the most features but it badly designed
-# Datalabelling 2 was being laid out better, till Robert changed my task.
-# When you return to it, build up databalleing 2
-# Databalleing 3 was left becasue it has some desiarble features
-
-from dash import Dash, dcc, Output, Input, html, State
-import dash_bootstrap_components as dbc
+import dash
+from dash import html
+from dash import dcc
+from dash.dependencies import Input, Output, State
+from Components import figure1_graph, figure2_dropdown, figure2_header, figure3_label, slider, pan, fourGraphs, xAxis_dropdown_3D, yAxis_dropdown_3D, zAxis_dropdown_3D
+from myFunctions import changeText, updateGraph, performKMeans
 import pandas as pd
 import plotly.express as px
-import numpy as np
-from plotly.subplots import make_subplots
 import plotly.graph_objs as go
-
-df = pd.read_csv("Data/UpdatedData.csv")
-column_names = df.columns.to_list()
-sensors = column_names[4:]
-
-fig = px.line(df, x="sample", y="xmeas_1")
-fig.update_layout(dragmode=False)
-
-myGraph = dcc.Graph(figure=fig)
-
-mytext = dcc.Markdown(children="Hello!")
-
-xAxis = dcc.Dropdown(
-    options=sensors, value=sensors[0], style={
-        "display": "block"}  # Initially visible
-)
-yAxis = dcc.Dropdown(
-    options=sensors, value=sensors[1], style={
-        "display": "block"}  # Initially visible
-)
-zAxis = dcc.Dropdown(
-    options=sensors, value=sensors[2], style={
-        "display": "block"}  # Initially visible
-)
-
-slider = dcc.RangeSlider(
-    min=0,
-    max=500,
-    step=1,
-    marks={i: str(i) for i in range(500)},
-    value=[0, 500 - 1],
-)
-
-checkbox = dcc.Dropdown(options=sensors, value='xmeas_1',
-                        style={"display": "block"})
-
-Button_SwitchView = html.Button(children="Switch to 3D")
-Button_SwitchPlotType = html.Button(children="Switch to scatter")
+from sklearn.cluster import KMeans
+import pandas as pd
 
 
-# LAYOUT
-app = Dash(__name__, external_stylesheets=[
-           dbc.themes.SOLAR])  # always the same
-app.layout = dbc.Container(
-    [
-        Button_SwitchView,
-        Button_SwitchPlotType,
-        mytext,
-        myGraph,
-        slider,
-        checkbox,
-        xAxis,
-        yAxis,
-        zAxis,
-    ]
-)
+app = dash.Dash(__name__)
+
+# DATA
+data = pd.read_csv("Data/UpdatedData.csv")
+data = data.iloc[:, 4:]
+
+shapes = []
+
+# Define the layout
+app.layout = html.Div(style={'background': 'linear-gradient(to bottom, blue, #000000)', 'height': '100vh', 'display': 'flex', 'justify-content': 'center', 'flex-direction': 'column', 'align-items': 'center'},
+             children=[
+                      # Top Graph
+                 html.Div(style={'height':'5%', 'width':'90%'}, children=[
+                    html.H1(children='Fault Labeller', style={'fontsize':100, 'color':'white', 'fontWeight':'bold', 'textAlign':'left', 'fontFamily':''})
+                 ]
+                 ),
+                    html.Div(style={'overflow':'scroll', 'width':'90%', 'height':'55%', 'margin':'20px', 'border-radius': '10px', 'padding': '20px', 'background-color': 'white'},
+                      children=[
+                          dcc.Markdown(id='action', children='Latest Action: ', style={'color': 'black'}),
+                          html.Button('Switch View', id='switchView'),
+                          
+                          
+                          figure1_graph, fourGraphs
+                      ]
+                      ),
+                      # Bottom 3 boxes
+                      html.Div(style={'width': '90%', 'height': '35%',  'display': 'flex', 'justify-content': 'space-between', 'align-items': 'center', 'margin':'20px', },
+                                    children=[
+                                        html.Div(style={'overflow':'scroll', 'border-radius': '10px', 'width': '24%', 'height': '100%',  'background-color': 'white'}, children=[figure2_header, figure2_dropdown, xAxis_dropdown_3D, yAxis_dropdown_3D, zAxis_dropdown_3D]),
+                                        html.Div(style={'width': '24%', 'height': '100%', }, children=[
+                                            html.Div(style={'border-radius': '10px','width': '100%', 'height': '47%', 'background-color': 'white'}),
+                                            html.Div(style={'border-radius': '10px','width': '100%', 'height': '6%', }),
+                                            html.Div(style={'border-radius': '10px','width': '100%', 'height': '47%', 'background-color': 'white'})
+                                        ]),
+                                        html.Div(style={'border-radius': '10px','width': '24%', 'height': '100%', 'background-color': 'white'}, children=[ figure3_label, html.Button('Confirm Label', id='newLabel'), html.Button('Remove Label', id='removeLabels'), html.Button('Undo Label', id='undoLabel')]),
+                                        html.Div(style={'width': '24%', 'height': '100%', }, children=[    
+                                            html.Div(style={'border-radius': '10px','width': '100%', 'height': '47%', 'background-color': 'white'}, 
+                                                    children=[slider,pan]
+                                                    ),
+                                            html.Div(style={'border-radius': '10px','width': '100%', 'height': '6%', }),
+                                            html.Div(style={'border-radius': '10px','width': '100%', 'height': '47%', 'background-color': 'white'})
+                                        ]),
+                                    ]
+                        ),
+                      ])
+
 
 
 @app.callback(
-    Output(mytext, "children"),
-    Output(myGraph, "figure"),
-    Output(Button_SwitchView, "children"),
-    Output(xAxis, "style"),
-    Output(yAxis, "style"),
-    Output(zAxis, "style"),
-    Output(checkbox, "style"),
-    Output(myGraph, "style"),
-    Output(Button_SwitchPlotType, "style"),
-    Output(Button_SwitchPlotType, "children"),
-    Input(checkbox, "value"),
-    Input(Button_SwitchView, "n_clicks"),
-    Input(xAxis, "value"),
-    Input(yAxis, "value"),
-    Input(zAxis, "value"),
-    Input(Button_SwitchPlotType, "n_clicks"),
-    Input(slider, 'value')
+    Output(figure2_dropdown, 'value'),
+    Input(figure2_dropdown, 'value')
 )
-def updateTimeGraph(selected_values, clicks, xAxis, yAxis, zAxis, scatterLineClicks, selected_range):
-    scatterLineText = ""
-    if clicks is None:
-        clicks = 2
-    if scatterLineClicks is None:
-        scatterLineClicks = 2
+def updatedText(values):
+    if (values == None):
+        return ['xmeas_1']
+    if (len(values) > 4):
+        values = values[1:]
 
-    start, end = selected_range
+    return  values
 
-    x = df['sample']
-    x_range = x[start:end+1]
-    y = df[selected_values]
-    y_range = y[start:end+1]
 
-    print(x_range)
-    print(y_range)
-    print('Selected Values: ', selected_values)
+@app.callback(
+    Output(figure1_graph, "figure"),
+    Output(figure2_dropdown, 'style'),
+    Output(xAxis_dropdown_3D, 'style'),
+    Output(yAxis_dropdown_3D, 'style'),
+    Output(zAxis_dropdown_3D, 'style'),
+    Output(fourGraphs, 'style'),
+    Output(figure1_graph, 'style'),
+    Input(figure2_dropdown, 'value'),
+    Input('newLabel', 'n_clicks'),
+    Input(slider, 'value'),
+    Input(pan, 'value'),
+    Input('switchView', 'n_clicks')
+)
+def updatedGraph(values, newLabelButton, zoom, pan, switchViewClicks):
+    if (switchViewClicks == None):
+        switchViewClicks = 0
+    if (switchViewClicks % 3 == 0):
 
-    if clicks % 2 == 0:
-        fig = px.line(df, x="sample", y=selected_values)
-        fig = {
-            'data': [{'x': x_range, 'y': y_range, 'type': 'scatter'}],
-            'layout': {
-                'xaxis': {'range': [x[start], x[end]]},
-                'yaxis': {'title': 'Value'},
-                'title': 'Time Based Graph'
-            }
-        }
-        buttonMessage = "Switch to 3D"
-        xAxisDisplay = {"display": "none"}
-        yAxisDisplay = {"display": "none"}
-        zAxisDisplay = {"display": "none"}
-        checkboxStyle = {"display": "block"}
-        scatterLineButtonStyle = {"display": "none"}
-        graphStyle = {"height": 400}
-        # fig.update_layout(dragmode=False)
-    if clicks % 2 == 1:
-        if scatterLineClicks % 2 == 0:
-            fig = px.line_3d(df, x=xAxis, y=yAxis, z=zAxis)
-            scatterLineText = "Switch to scatter"
-        if scatterLineClicks % 2 == 1:
-            fig = px.scatter_3d(df, x=xAxis, y=yAxis, z=zAxis)
-            scatterLineText = "Switch to line"
-        buttonMessage = "Switch to time"
-        xAxisDisplay = {"display": "block"}
-        yAxisDisplay = {"display": "block"}
-        zAxisDisplay = {"display": "block"}
-        checkboxStyle = {"display": "none"}
-        scatterLineButtonStyle = {"display": "block"}
-        graphStyle = {"height": 400}
+        # TIME BASED VIEW
+        figure2_dropdown_style = {"display": "block"}
+        xAxis_dropdown_3D_style = {"display": "none"}
+        yAxis_dropdown_3D_style = {"display": "none"}
+        zAxis_dropdown_3D_style = {"display": "none"}
+        fourGraphs_style = {"display":"none"}
+        figure1_graph_style = {"display":"block"}
+
+        selectData = []
+        for i in range(len(values)):
+            name = values[i]
+            yx = 'y' + str(i+1)
+            selectData.append(go.Scatter(y=data.loc[:, values[i]], name=name, yaxis=yx))
         
+        x0 = pan
+        zoom = 10-zoom
+        x1 = x0+zoom*200+1
+        layout = go.Layout(xaxis=dict(range=[x0, x1]), dragmode='select', legend={'x':0, 'y':1.2}, yaxis=dict(title='Sensor Value', color='blue'), yaxis2=dict(overlaying='y', color='orange', side='right'), yaxis3=dict(overlaying='y', color='green',side='left', position=0.001,), yaxis4=dict( overlaying='y', color='red', side='right'),
+                        shapes=shapes)
+        
+        fig = {'data': selectData,
+        'layout': layout,
+        }
 
-    return (
-        f'Selected values: {", ".join(selected_values)}',
-        fig,
-        buttonMessage,
-        xAxisDisplay,
-        yAxisDisplay,
-        zAxisDisplay,
-        checkboxStyle,
-        graphStyle,
-        scatterLineButtonStyle,
-        scatterLineText,
-    )
+    elif (switchViewClicks % 3 == 1):
+
+        # 4 time based views (or more)
+        
+        
+        figure2_dropdown_style = {"display": "none"}
+        xAxis_dropdown_3D_style = {"display": "none"}
+        yAxis_dropdown_3D_style = {"display": "none"}
+        zAxis_dropdown_3D_style = {"display": "none"}
+        fourGraphs_style = {"display":"block"}
+        figure1_graph_style = {"display":"none"}
+        fig = px.line()
+        
+    elif (switchViewClicks % 3 == 2):
+        # 3D View
+        fig = performKMeans(data)
+        figure2_dropdown_style = {"display": "none"}
+        xAxis_dropdown_3D_style = {"display": "block"}
+        yAxis_dropdown_3D_style = {"display": "block"}
+        zAxis_dropdown_3D_style = {"display": "block"}
+        fourGraphs_style = {"display":"none"}
+        figure1_graph_style = {"display":"block"}
+
+    return fig, figure2_dropdown_style, xAxis_dropdown_3D_style, yAxis_dropdown_3D_style, zAxis_dropdown_3D_style, fourGraphs_style, figure1_graph_style
 
 
-if __name__ == "__main__":
+@app.callback(
+    Output('action', "children"),
+    Output('newLabel', 'n_clicks'),
+    Output('removeLabels', 'n_clicks'),
+    Output('undoLabel', 'n_clicks'),
+    Input('newLabel', 'n_clicks'),
+    Input('removeLabels', 'n_clicks'),
+    Input('undoLabel', 'n_clicks'),
+    State(figure1_graph, 'relayoutData'),
+    State(figure3_label, 'value'),
+)
+def drawRectangle(newLabel, removeLabel, undoLabel, relayoutData, label):
+    actionmessage = ''
+    print(newLabel)
+    print(removeLabel)
+    
+    if (newLabel == 1):
+    
+        # New label pressed
+        if (relayoutData == None):
+            return 'Latest Action:'
+        if 'selections' not in relayoutData.keys():
+            return 'Latest Action:'
+        
+        x0 = relayoutData['selections'][0]['x0']
+        x1 = relayoutData['selections'][0]['x1']
+
+        if (label=='No Fault'):
+            color = 'green'
+        elif (label=='Fault 1'):
+            color = 'red'
+        elif (label=='Fault 2'):
+            color = 'orange'
+        else:
+            color = 'yellow'
+
+        shapes.append({
+            'type':'rect',
+            'x0':x0,
+            'x1':x1,
+            'y0':0,
+            'y1':0.05,
+            'fillcolor':color,
+            'yref': 'paper',
+        },)
+        actionmessage = 'Latest Action: ' + str(round(x0)) + ' to ' + str(round(x1)) + ' labelled as ' + label
+    elif (removeLabel == 1):
+        shapes.clear()
+        actionmessage = 'Latest Action: Labels Removed'
+
+    elif (undoLabel == 1):
+        shapes.pop()
+        actionmessage = 'Latest Action: Labels Undone'
+
+    return actionmessage,0, 0, 0
+
+
+
+
+
+
+
+
+
+# @app.callback(
+#     Output(figure1_graph, "figure"),
+#     Input(figure2_dropdown, 'value')
+# )
+# def updateGraph(value):
+#   fig = px.line(data, y=value)
+#   return fig
+  
+        
+    
+
+
+# Run the app
+if __name__ == '__main__':
     app.run_server(debug=True)

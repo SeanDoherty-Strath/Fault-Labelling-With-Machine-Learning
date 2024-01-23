@@ -26,13 +26,15 @@ print(df.shape)
 # 2000 x 52
 
 
+
 # Define the neural network model
 def create_model():
 
     # Define the dimensions
     input_output_dimension = 52
-    hidden_layer_dimension = 25
-    encoding_dimension = 12
+    hidden_layer_dimension = 40
+    encoding_dimension = 14
+
 
     # INPUT LAYER
     input_layer = keras.Input(shape=(input_output_dimension,))
@@ -40,10 +42,10 @@ def create_model():
 
     # ENCODER
     encoder = layers.Dense(hidden_layer_dimension, activation='relu')(input_layer)
-    encoder = layers.Dense(20, activation='relu')(encoder)
+    encoder = layers.Dense(encoding_dimension, activation='relu')(encoder)
 
     # DECODER
-    decoder = layers.Dense(encoding_dimension, activation='relu')(encoder)
+    decoder = layers.Dense(hidden_layer_dimension, activation='relu')(encoder)
     decoder = layers.Dense(input_output_dimension, activation='linear')(decoder)  # Use linear activation here
 
     # AUTOENCODER
@@ -53,6 +55,9 @@ def create_model():
     autoencoder.compile(optimizer='adam', loss='mse')
 
     return autoencoder
+
+
+model = create_model()
 
 # Specify the number of folds
 k_folds = 5
@@ -74,7 +79,7 @@ for fold, (train_index, val_index) in enumerate(kf.split(df)):
     model = create_model()
 
     # Train the model on the current fold and store the training history
-    history = model.fit(xTrain, xTrain, epochs=500, batch_size=10, validation_data=(xVal, xVal), verbose=0)
+    history = model.fit(xTrain, xTrain, epochs=2, batch_size=10, validation_data=(xVal, xVal), verbose=0)
     
     # Evaluate the model on the validation set for this fold
     val_loss = model.evaluate(xVal, xVal)
@@ -112,3 +117,43 @@ for i in range(5):
     plt.plot(predictedData[:960, i])
     plt.ylim(-3, 3)
 plt.show()
+
+
+
+#  CONVERT TO LATENT SPACE
+# encoder = keras.Model(inputs=autoencoder.input,
+#     outputs=autoencoder.get_layer('encoder_1').output)
+
+encoder = keras.Model(inputs=model.input, outputs=model.layers[2])
+# # Get the latent space representation for the input data
+latent_space = encoder.predict(df)
+
+print('Latent space', latent_space)
+print('Latent space size: ', np.shape(latent_space))
+
+
+# # Create a 3D plot
+# fig = plt.figure()
+# ax = fig.add_subplot(111, projection='3d')
+
+# # Scatter plot the points in the latent space
+# # ax.scatter(latent_space[:, 3], latent_space[:, 4],
+# #           latent_space[:, 5], marker='o', s=10, c='r')
+
+
+# for i in range(0, encoding_dimension):
+#     text = 'Latent space', i
+#     print(text, latent_space[:, i])
+
+
+# latentSpaceDF = pd.DataFrame(latent_space)
+# filepath = Path('./LatentSpace.csv')
+
+# latentSpaceDF.to_csv(filepath)
+
+# ax.set_xlabel('Latent Dimension 1')
+# ax.set_ylabel('Latent Dimension 2')
+# ax.set_zlabel('Latent Dimension 3')
+
+# plt.title('Latent Space Visualization')
+# plt.show()
