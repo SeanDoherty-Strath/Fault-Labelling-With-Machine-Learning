@@ -38,7 +38,7 @@ x_0 = 0
 x_1 = 5000
 
 colours = [['green'], ['red'], ['orange'], [
-    'yellow'], ['pink'], ['purple'], ['lavender']]
+    'yellow'], ['pink'], ['purple'], ['lavender'], ['blue'], ['brown'], ['indigo']]
 
 # t is used to switch between time based view and 3D based view
 t = None
@@ -144,13 +144,13 @@ app.layout = html.Div(style={'background': 'linear-gradient(to bottom, blue, #00
             dcc.Markdown('Parameters: ', style={
                 'fontSize': 22, 'fontWeight': 'bold', 'margin-left': 10, }),
             html.Div(style={'display': 'flex', }, children=[
-                dcc.Markdown('No. Clusters (K)', style={
+                dcc.Markdown('No. Clusters (K)', id='kMeansMarkdown',  style={
                              'margin-left': 10, 'width': '50%'}),
                 dcc.Input(type='number', id='K', style={
                     'align-self': 'center', 'width': '100%', 'height': '90%', 'fontSize': 20})
             ]),
             html.Div(style={'display': 'flex', }, children=[
-                dcc.Markdown('Reduced Size:', style={
+                dcc.Markdown('Reduced Size:', id='reducedSizeMarkdown', style={
                              'margin-left': 10, 'width': '50%'}),
                 dcc.Input(type='number', id='reducedSize', style={
                     'align-self': 'center', 'width': '100%', 'height': '90%', 'fontSize': 20})
@@ -242,7 +242,8 @@ def exportCSV(clicked, fileName):
     if clicked is None:
         raise PreventUpdate
 
-    df = pd.DataFrame(labels)
+    df = data
+    df['labels'] = labels
 
     csv_filename = fileName + '.csv'
     df.to_csv(csv_filename, index=False)
@@ -368,6 +369,20 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
                     x0 = 0
                 if (x1 > 20000):
                     x1 = 20000
+
+                shapesToDelete = []
+                if shapes != []:
+                    for shape in range(len(shapes)):
+
+                        # if a previous label is inside this one, delete it.  This saves compuation cost
+                        if x0 < shapes[shape]['x0'] and x1 > shapes[shape]['x1']:
+                            print('got here')
+                            shapesToDelete.append(shape)
+
+                for shape in range(len(shapesToDelete)-1, -1, -1):
+                    # print(shapes[shapesToDelete[shape]])
+                    #     print(shapesToDelete[shape])
+                    del shapes[shapesToDelete[shape]]
 
                 if (labelDropdown == 'No Fault'):
                     color = 'green'
@@ -532,72 +547,84 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
             dragMode = 'pan'
 
         if (newAutoLabel == 1):
-            shapes = []
-            df = data.loc[:, sensorChecklist]
 
-            # change this to PCA
-            if (reductionMethod == 'PCA'):
-                print(reducedSize)
-                if (reducedSize != None and reducedSize > 0):
+            if (sensorChecklist == []):
+                alert = True
+                alertMessage = 'Select sensors for auto-detection.'
+            else:
 
-                    df = performPCA(df, reducedSize)
-                else:
-                    alert = True
-                    alertMessage = 'Wrong value input for PCA'
+                shapes = []
+                df = data.loc[:, sensorChecklist]
 
-                df = performPCA(df, reducedSize)
-                print(df)
+                # change this to PCA
+                if (reductionMethod == 'PCA'):
+                    print(reducedSize)
+                    if (reducedSize == None or reducedSize < 2):
+                        alert = True
+                        alertMessage = 'Wrong value input for PCA. Data reduction has failed.'
 
-            if (clusterMethod == 'K Means'):
-                if (K != None and K > 0):
-                    labels = performKMeans(df, K)
+                    else:
+                        df = performPCA(df, reducedSize)
 
-            shapes = []
-            x0 = 0
-            x1 = x0
+                if (clusterMethod == 'K Means'):
+                    if (K == None or K < 0):
+                        alert = True
+                        alertMessage = 'Wrong value input for K Means. Clustering has failed.'
+                    else:
+                        if (K > 10 or K <= 1):
+                            alert = True
+                            alertMessage = 'Select a value between 1 and 10 for K.'
+                        else:
+                            labels = performKMeans(df, K)
 
-            clusterDropdownOptions = list(set(labels))
-            clusterDropdownValue = clusterDropdownOptions
+                shapes = []
+                x0 = 0
+                x1 = x0
 
-            # labels = [0, 0, 0, 1, 1, 1, 2, 3, 4]
-            for i in range(1, len(labels)):
+                clusterDropdownOptions = list(set(labels))
+                clusterDropdownValue = clusterDropdownOptions
 
-                if labels[i] != labels[i-1]:
+                # labels = [0, 0, 0, 1, 1, 1, 2, 3, 4]
+                for i in range(1, len(labels)):
 
-                    x1 = i
+                    if labels[i] != labels[i-1]:
 
-                    shapes.append({
-                        'type': 'rect',
-                        'x0': x0,
-                        'x1': x1,
-                        'y0': 0,
-                        'y1': 0.05,
-                        'fillcolor': colours[labels[x0]][0],
-                        'yref': 'paper',
-                    },)
+                        x1 = i
+                        print(labels[x0])
+                        shapes.append({
+                            'type': 'rect',
+                            'x0': x0,
+                            'x1': x1,
+                            'y0': 0,
+                            'y1': 0.05,
+                            'fillcolor': colours[labels[x0]][0],
+                            'yref': 'paper',
+                            'name': 'Operating Condition: ' + str(labels[x0])
+                        },)
 
-                    x0 = i
-            if (labels[x0] == 0):
-                color = 'green'
-            elif (labels[x0] == 1):
-                color = 'blue'
-            elif (labels[x0] == 2):
-                color = 'orange'
-            elif (labels[x0] == 3):
-                color = 'yellow'
-            elif (labels[x0] == 4):
-                color = 'red'
-            shapes.append({
-                'type': 'rect',
-                        'x0': x0,
-                        'x1': len(labels),
-                        'y0': 0,
-                        'y1': 0.05,
-                        'fillcolor': color,
-                        'yref': 'paper',
-            },)
-            x_0 = 0
-            x_1 = 20000
+                        x0 = i
+                if (labels[x0] == 0):
+                    color = 'green'
+                elif (labels[x0] == 1):
+                    color = 'blue'
+                elif (labels[x0] == 2):
+                    color = 'orange'
+                elif (labels[x0] == 3):
+                    color = 'yellow'
+                elif (labels[x0] == 4):
+                    color = 'red'
+                shapes.append({
+                    'type': 'rect',
+                            'x0': x0,
+                            'x1': len(labels),
+                            'y0': 0,
+                            'y1': 0.05,
+                            'fillcolor': colours[labels[x0]][0],
+                            'yref': 'paper',
+                            'name': 'AI_FAULT'
+                },)
+                x_0 = 0
+                x_1 = 20000
 
         layout = go.Layout(legend={'x': 0, 'y': 1.2}, xaxis=dict(range=[x_0, x_1]), dragmode=dragMode, yaxis=dict(fixedrange=True, title='Sensor Value', color='blue'), yaxis2=dict(
             fixedrange=True, overlaying='y', color='orange', side='right'), yaxis3=dict(fixedrange=True, overlaying='y', color='green', side='left', position=0.001,), yaxis4=dict(fixedrange=True, overlaying='y', color='red', side='right'), shapes=shapes)
@@ -617,10 +644,11 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
     if (switchViewButtonClicks % 2 == 1):
         #  3D SCATTER PLOT
         if (observeClusterClikcs % 2 == 0):
-
+            df = data
+            df['labels'] = labels
             # fig = px.scatter_3d(data, x='xmeas_1', y='xmeas_2', z='xmeas_3', text='Unnamed: 0', color_discrete_sequence=['black'])
-            fig = px.scatter_3d(data, x=xAxis_dropdown_3D, y=yAxis_dropdown_3D,
-                                z=zAxis_dropdown_3D, color='Time', opacity=0.05)
+            fig = px.scatter_3d(df, x=xAxis_dropdown_3D, y=yAxis_dropdown_3D,
+                                z=zAxis_dropdown_3D, color='Time',  opacity=0.05)
             labelButtonTitle = 'New Label'
 
             if t is not None:
@@ -634,10 +662,6 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
             df = data
 
             df['labels'] = labels
-
-            maxLabel = max(labels)
-            minLabel = min(labels)
-            #  USE ^^ ELSEWHERE
 
             cluster_dataframes = []
 
@@ -674,31 +698,6 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
 
 
 @app.callback(
-    Output('shape-clicked', 'children'),
-    [Input(mainGraph, 'clickData')]
-)
-def update_textbox(click_data):
-    if click_data is None:
-        return "Click on a shape to see its information"
-    else:
-        # Find the shape that was clicked
-        clicked_shape_info = None
-        for shape in shapes:
-            if (
-                shape['x0'] <= click_data['points'][0]['x'] and
-                shape['x1'] >= click_data['points'][0]['x']
-            ):
-                clicked_shape_info = shape['name']
-
-                break
-
-        if clicked_shape_info:
-            return f"Clicked Shape Info: {clicked_shape_info}"
-        else:
-            return "No shape clicked"
-
-
-@app.callback(
     Output('points-output', 'children'),
     [Input(mainGraph, 'clickData')],
     State('switchView', 'n_clicks')
@@ -732,6 +731,39 @@ def display_coordinates(click_data, switchViewClicks):
 
 
 @app.callback(
+    Output('shape-clicked', 'children'),
+    [Input(mainGraph, 'clickData')],
+    State('switchView', 'n_clicks')
+)
+def update_textbox(click_data, switchViewClicks):
+    if (switchViewClicks == None):
+        switchViewClicks = 0
+
+    if click_data is None:
+        return "Click on a shape to see its information"
+    else:
+        print(click_data)
+        if (switchViewClicks % 2 == 0):
+            # Find the shape that was clicked
+            clicked_shape_info = None
+            for shape in shapes:
+                if (
+                    shape['x0'] <= click_data['points'][0]['x'] and
+                    shape['x1'] >= click_data['points'][0]['x']
+                ):
+                    clicked_shape_info = shape['name']
+
+                    break
+
+            if clicked_shape_info:
+                return f"Clicked Shape Info: {clicked_shape_info}"
+            else:
+                return "No shape clicked"
+        elif (switchViewClicks % 2 == 1):
+            return '3D Plot'
+
+
+@app.callback(
     Output('sensor-checklist', 'value'),
     Output('select-all', 'n_clicks'),
     Output('deselect-all', 'n_clicks'),
@@ -747,6 +779,37 @@ def selectDeselectAll(selectClicks, deselectClicks):
         return data.columns[1:], 0, 0
     else:
         return [], 0, 0
+
+
+@app.callback(
+    Output('K', 'style'),
+    Output('reducedSize', 'style'),
+    Output('reducedSizeMarkdown', 'style'),
+    Output('kMeansMarkdown', 'style'),
+
+    Input(clusterMethod, 'value'),
+    Input(reductionMethod, 'value')
+)
+def autoLabelStyles(clusterMethod, reductionMethod):
+
+    K_style = {'display': 'none'}
+    kMeansMarkdown = {'display': 'none'}
+    reducedStyle_style = {'display': 'none'}
+    reducedSizeMarkdown = {'display': 'none'}
+
+    if (clusterMethod == 'K Means'):
+        K_style = {'display': 'block', 'align-self': 'center',
+                   'width': '100%', 'height': '90%', 'fontSize': 20}
+        kMeansMarkdown = {'display': 'block',
+                          'margin-left': 10, 'width': '50%'}
+
+    if (reductionMethod == 'PCA'):
+        reducedStyle_style = {'display': 'block', 'align-self': 'center',
+                              'width': '100%', 'height': '90%', 'fontSize': 20}
+        reducedSizeMarkdown = {'display': 'block',
+                               'margin-left': 10, 'width': '50%'}
+
+    return K_style, reducedStyle_style, reducedSizeMarkdown, kMeansMarkdown
 
 
 # Run the app

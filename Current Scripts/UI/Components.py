@@ -175,7 +175,7 @@ clusterMethod = dcc.Dropdown(
     options=['K Means', 'DBSCAN'], value='K Means', style={'width': '100%'})
 AI_text2 = dcc.Markdown('Reduction Algorithm:')
 reductionMethod = dcc.Dropdown(
-    options=["PCA", "Autoencoding", "None"], style={'width': '100%'})
+    options=["PCA", "Autoencoding", "None"], value='None', style={'width': '100%'})
 AI_input3 = dcc.Input(id='AI-input1', type='number',)
 AI_input4 = dcc.Input(id='AI-input2', type='number',)
 AI_checkbox = dcc.Checklist(id='AI-checkbox', options=data.columns, )
