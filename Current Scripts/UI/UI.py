@@ -17,7 +17,7 @@ from dash.exceptions import PreventUpdate
 # Internal Components and Functions
 from Components import mainGraph, zoom, pan, fourGraphs, xAxis_dropdown_3D, yAxis_dropdown_3D, zAxis_dropdown_3D, stats, faultFinder, alert, AI_checkbox
 from Components import title, sensorDropdown, sensorHeader, labelDropdown, stat3, faultFinderHeader, faultFinderText, stat1, stat2, exportName, exportHeader, exportLocation, exportConfirm, AI_header, AI_text1, clusterMethod, AI_text2, reductionMethod, AI_input1, AI_input2, AI_input3, AI_input4
-from myFunctions import changeText, updateGraph, performKMeans
+from myFunctions import changeText, updateGraph, performKMeans, performPCA
 
 app = dash.Dash(__name__)
 
@@ -32,12 +32,13 @@ currentPoint = 0  # The current point, for navigation
 # -1 for non label, 0 for no fault, 1 for fault 1, 2 for fault 2 etc
 labels = [-1]*data.shape[0]
 
+
 # What proportion of the screen is shown
 x_0 = 0
 x_1 = 5000
 
-colours = [['blue'], ['green'], ['orange'], [
-    'purple'], ['pink'], ['violet'], ['lavender']]
+colours = [['green'], ['red'], ['orange'], [
+    'yellow'], ['pink'], ['purple'], ['lavender']]
 
 # t is used to switch between time based view and 3D based view
 t = None
@@ -57,6 +58,7 @@ app.layout = html.Div(style={'background': 'linear-gradient(to bottom, blue, #00
         html.Button(children='Observe Clusters',
                     id='observe-clusters'),
         mainGraph,
+        dcc.Checklist(id='clusterDropdown', options=[])
 
         # dcc.Graph(id='tempGraph')
         # zoom
@@ -78,10 +80,12 @@ app.layout = html.Div(style={'background': 'linear-gradient(to bottom, blue, #00
 
         html.Div(style={'width': '24%', 'height': '100%', }, children=[
             #  Box 2
-            html.Div(style={'border-radius': '10px', 'width': '100%', 'height': '47%', 'background-color': 'white'},
+            html.Div(style={'overflow': 'scroll', 'border-radius': '10px', 'width': '100%', 'height': '47%', 'background-color': 'white'},
                      children=[
                 # zoom,
                 # pan
+                dcc.Markdown('Labeller', style={
+                             'fontSize': 26, 'fontWeight': 'bold', 'textAlign': 'center', }),
 
                 html.Button(children='Start Label', id='labelButton', style={
                     'width': '100%', 'height': 40, 'fontSize': 16}),
@@ -124,36 +128,37 @@ app.layout = html.Div(style={'background': 'linear-gradient(to bottom, blue, #00
                  children=[
             AI_header,
             dcc.Markdown('Algorithms: ', style={
-                'fontsize': 26, 'fontWeight': 'bold'}),
+                'fontSize': 22, 'fontWeight': 'bold', 'margin-left': 10, }),
             html.Div(style={'display': 'flex', }, children=[
                 dcc.Markdown(
-                    'Clustering Method:'),
+                    'Clustering Method:', style={'margin-left': 10, 'width': '50%'}),
                 clusterMethod,
             ]),
             html.Div(style={'display': 'flex', }, children=[
                 dcc.Markdown(
-                    'Reduction Method:'),
+                    'Reduction Method:', style={'margin-left': 10, 'width': '50%'}),
                 reductionMethod
             ]),
 
 
             dcc.Markdown('Parameters: ', style={
-                'fontsize': 26, 'fontWeight': 'bold'}),
+                'fontSize': 22, 'fontWeight': 'bold', 'margin-left': 10, }),
             html.Div(style={'display': 'flex', }, children=[
-                dcc.Markdown('K ='),
-                dcc.Input(type='number')
+                dcc.Markdown('No. Clusters (K)', style={
+                             'margin-left': 10, 'width': '50%'}),
+                dcc.Input(type='number', id='K', style={
+                    'align-self': 'center', 'width': '100%', 'height': '90%', 'fontSize': 20})
             ]),
             html.Div(style={'display': 'flex', }, children=[
-                dcc.Markdown('Min Val ='),
-                dcc.Input(type='number')
+                dcc.Markdown('Reduced Size:', style={
+                             'margin-left': 10, 'width': '50%'}),
+                dcc.Input(type='number', id='reducedSize', style={
+                    'align-self': 'center', 'width': '100%', 'height': '90%', 'fontSize': 20})
             ]),
+            dcc.Markdown('Sensors: ', style={
+                'fontSize': 22, 'fontWeight': 'bold', 'margin-left': 10, }),
             html.Div(style={'display': 'flex', }, children=[
-                dcc.Markdown('Epsilon ='),
-                dcc.Input(type='number')
-            ]),
-            html.Div(style={'display': 'flex', }, children=[
-                dcc.Markdown(
-                    'Starting Values ='),
+
                 html.Button(
                     "Select all", id='select-all'),
                 html.Button(
@@ -161,12 +166,9 @@ app.layout = html.Div(style={'background': 'linear-gradient(to bottom, blue, #00
             ]),
             html.Div(style={'width': '100%', 'height': 150, 'overflow': 'scroll'}, children=[
                 dcc.Checklist(
-                    id='sensor-checklist', options=data.columns, inline=True, labelStyle={'width': '33%'})
+                    id='sensor-checklist', options=data.columns[1:], inline=True, labelStyle={'width': '33%'})
             ]),
-            html.Div(style={'display': 'flex', }, children=[
-                dcc.Markdown('Reduced Size:'),
-                dcc.Input(type='number')
-            ]),
+
 
             html.Button(children='Start Now', id='startAutoLabel', style={
                 'width': '100%', 'fontSize': 20})
@@ -179,6 +181,8 @@ app.layout = html.Div(style={'background': 'linear-gradient(to bottom, blue, #00
                  children=[
             html.Div(style={'overflow': 'scroll', 'border-radius': '10px', 'width': '100%', 'height': '47%', 'background-color': 'white'},
                      children=[
+                         dcc.Markdown('Stats', style={
+                             'fontSize': 26, 'fontWeight': 'bold', 'textAlign': 'center', }),
                 stat1, stat2, stat3,
                 dcc.Markdown(
                     'Shape clicked', id='shape-clicked'),
@@ -190,12 +194,17 @@ app.layout = html.Div(style={'background': 'linear-gradient(to bottom, blue, #00
             # Box6
             html.Div(style={'border-radius': '10px', 'width': '100%', 'height': '47%', 'background-color': 'white', 'display': 'flex', 'justify-content': 'center', },
                      children=[
-                html.Div(style={'display': 'flex', 'flex-direction': 'column', 'justify-content': 'center', 'align-items': 'center'},
+                html.Div(style={'display': 'flex', 'flex-direction': 'column', 'justify-content': 'center', 'align-items': 'center', 'width': '100%', },
                          children=[
-                    exportHeader,
-                    dcc.Markdown('file name:'),
-                    exportName,
-                    exportConfirm,
+                    dcc.Markdown('Export File to CSV', style={
+                         'fontSize': 26, 'fontWeight': 'bold', 'textAlign': 'center', }),
+                    html.Div(style={'display': 'flex', 'width': '100%', }, children=[
+                        # dcc.Markdown('File Name:', style={
+                        # }),
+                        exportName,
+                        exportConfirm
+                    ]),
+
                     dcc.Download(
                         id="downloadData"),
 
@@ -262,8 +271,8 @@ def exportCSV(clicked, fileName):
 
     Output(sensorDropdown, 'style'),
     Output('startAutoLabel', 'n_clicks'),
-
-
+    Output('clusterDropdown', 'options'),
+    Output('clusterDropdown', 'value'),
 
 
     Input(sensorDropdown, 'value'),
@@ -283,29 +292,37 @@ def exportCSV(clicked, fileName):
     Input(zAxis_dropdown_3D, 'value'),
     Input('startAutoLabel', 'n_clicks'),
     Input('observe-clusters', 'n_clicks'),
-
+    Input('clusterDropdown', 'options'),
+    Input('clusterDropdown', 'value'),
     State('sensor-checklist', 'value'),
     State(clusterMethod, 'value'),
     State(reductionMethod, 'value'),
 
     State(mainGraph, 'relayoutData'),
+    State('K', 'value'),
+    State('reducedSize', 'value')
+
 )
-def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButtonClicks, removeLabelClick, undoLabelClick, findPrevClicked, findNextClicked, faultFinder, clickData, xAxis_dropdown_3D, yAxis_dropdown_3D, zAxis_dropdown_3D, newAutoLabel, observeClusterClikcs, sensorChecklist, clusterMethod, reductionMethod, relayoutData):
+def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButtonClicks, removeLabelClick, undoLabelClick, findPrevClicked, findNextClicked, faultFinder, clickData, xAxis_dropdown_3D, yAxis_dropdown_3D, zAxis_dropdown_3D, newAutoLabel, observeClusterClikcs, clusterDropdownOptions, clusterDropdownValue, sensorChecklist, clusterMethod, reductionMethod, relayoutData, K, reducedSize):
     fig = px.line()
     global shapes
     global labels
-
+    global colours
     if (newAutoLabel == None):
         newAutoLabel = 0
 
     if (observeClusterClikcs == None):
         observeClusterClikcs = 0
+
     stat1 = ''
     alert = False
     alertMessage = ''
 
     global x_0
     global x_1
+
+    print('Relayout Data: ', relayoutData)
+
     if relayoutData and 'xaxis.range[0]' in relayoutData.keys():
         x_0 = relayoutData.get('xaxis.range[0]')
         x_1 = relayoutData.get('xaxis.range[1]')
@@ -317,14 +334,14 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
         findNextClicked = 0
 
     if (switchViewButtonClicks % 2 == 0):
-        max = 1
+        maximum = 1
         selectData = []
         for i in range(len(sensorDropdown)):
             name = sensorDropdown[i]
             yaxis = 'y' + str(i+1)
 
-            if (data.loc[:, sensorDropdown[i]].max() > max):
-                max = data.loc[:, sensorDropdown[i]].max()
+            if (data.loc[:, sensorDropdown[i]].max() > maximum):
+                maximum = data.loc[:, sensorDropdown[i]].max()
 
             selectData.append(go.Scatter(
                 y=data.loc[:, sensorDropdown[i]], name=name, yaxis=yaxis, opacity=1-0.2*i))
@@ -370,7 +387,7 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
                     'x1': x1,
                     'y0': 0,
                     'y1': 0.05,
-                    'fillcolor': color,
+                    'fillcolor': colours[fault][0],
                     'yref': 'paper',
                     'name': labelDropdown
                 },)
@@ -383,11 +400,13 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
 
                 labels[x0:x1] = [fault] * (x1-x0)
 
+                clusterDropdownOptions = list(set(labels))
+                clusterDropdownValue = clusterDropdownOptions
+
         if (removeLabelClick == 1 and shapes != []):
             shapes.clear()
             labels[0:len(labels)] = [-1] * (len(labels))
-            n = labels.count(-1)
-            stat3 = 'Data points unlabelled: ' + str(n)
+
         if (undoLabelClick == 1 and shapes != []):
             shapes.pop()
             shapes.pop()
@@ -515,14 +534,30 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
         if (newAutoLabel == 1):
             shapes = []
             df = data.loc[:, sensorChecklist]
-            print(df)
+
+            # change this to PCA
+            if (reductionMethod == 'PCA'):
+                print(reducedSize)
+                if (reducedSize != None and reducedSize > 0):
+
+                    df = performPCA(df, reducedSize)
+                else:
+                    alert = True
+                    alertMessage = 'Wrong value input for PCA'
+
+                df = performPCA(df, reducedSize)
+                print(df)
 
             if (clusterMethod == 'K Means'):
-                labels = performKMeans(df, 3)
+                if (K != None and K > 0):
+                    labels = performKMeans(df, K)
 
             shapes = []
             x0 = 0
             x1 = x0
+
+            clusterDropdownOptions = list(set(labels))
+            clusterDropdownValue = clusterDropdownOptions
 
             # labels = [0, 0, 0, 1, 1, 1, 2, 3, 4]
             for i in range(1, len(labels)):
@@ -530,16 +565,6 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
                 if labels[i] != labels[i-1]:
 
                     x1 = i
-                    if (labels[x0] == 0):
-                        color = 'green'
-                    elif (labels[x0] == 1):
-                        color = 'blue'
-                    elif (labels[x0] == 2):
-                        color = 'orange'
-                    elif (labels[x0] == 3):
-                        color = 'yellow'
-                    elif (labels[x0] == 4):
-                        color = 'red'
 
                     shapes.append({
                         'type': 'rect',
@@ -547,7 +572,7 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
                         'x1': x1,
                         'y0': 0,
                         'y1': 0.05,
-                        'fillcolor': color,
+                        'fillcolor': colours[labels[x0]][0],
                         'yref': 'paper',
                     },)
 
@@ -579,8 +604,8 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
 
         if t is not None:
             selectData.append(
-                go.Line(x=[t, t], y=[0, max], name='Selected Point', line=dict(color='black')))
-            # print('plotted')
+                go.Line(x=[t, t], y=[0, maximum], name='Selected Point', line=dict(color='black')))
+        # print('plotted')
 
         fig = {'data': selectData, 'layout': layout, }
 
@@ -597,8 +622,7 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
             fig = px.scatter_3d(data, x=xAxis_dropdown_3D, y=yAxis_dropdown_3D,
                                 z=zAxis_dropdown_3D, color='Time', opacity=0.05)
             labelButtonTitle = 'New Label'
-            print('T:')
-            print(t)
+
             if t is not None:
                 fig.add_scatter3d(x=[data[xAxis_dropdown_3D][t]], y=[data[yAxis_dropdown_3D][t]], z=[
                                   data[zAxis_dropdown_3D][t]], marker=dict(color='black'))
@@ -608,23 +632,35 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
             labelButtonTitle = 'New Label'
 
             df = data
+
             df['labels'] = labels
+
+            maxLabel = max(labels)
+            minLabel = min(labels)
             #  USE ^^ ELSEWHERE
 
             cluster_dataframes = []
-            for label in range(-1, 3):
-                # Filter data based on cluster label
-                cluster_df = df[labels == label]
-                cluster_dataframes.append(cluster_df)
 
-            global colours
+            grouped = df.groupby('labels')
 
-            print(cluster_dataframes)
+            # Creating separate dataframes for each group
+            cluster_dataframes = {}
+            for label, group in grouped:
+                cluster_dataframes[label] = group
+
             fig = px.scatter_3d()
-            for label in range(0, 4):
-                print(label)
-                fig.add_trace(px.scatter_3d(cluster_dataframes[label], x=xAxis_dropdown_3D, y=yAxis_dropdown_3D, z=zAxis_dropdown_3D,
-                                            color_discrete_sequence=colours[label]).data[0])
+            if t is not None:
+                fig.add_scatter3d(x=[data[xAxis_dropdown_3D][t]], y=[data[yAxis_dropdown_3D][t]], z=[
+                                  data[zAxis_dropdown_3D][t]], marker=dict(color='black'))
+
+            for cluster in cluster_dataframes:
+                if clusterDropdownValue:
+                    if cluster in clusterDropdownValue:
+                        fig.add_trace(px.scatter_3d(cluster_dataframes[cluster], x=xAxis_dropdown_3D, y=yAxis_dropdown_3D, opacity=0.5, z=zAxis_dropdown_3D,
+                                                    color_discrete_sequence=colours[cluster]).data[0])
+                else:
+                    alert = True
+                    alertMessage = 'No Clusters Placed'
 
             sensorDropdownStyle = {'display': 'none'}
 
@@ -634,7 +670,7 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
     stat2 = 'No. Types Labels Placed: ', int(len(set(labels))-1)
     stat3 = 'No. Labels Placed: ', len(shapes)
 
-    return fig, labelButtonTitle, 0, 0, 0, 0, stat1, stat2, stat3, alert, alertMessage, sensorDropdownStyle, 0
+    return fig, labelButtonTitle, 0, 0, 0, 0, stat1, stat2, stat3, alert, alertMessage, sensorDropdownStyle, 0, clusterDropdownOptions, clusterDropdownValue
 
 
 @app.callback(
@@ -647,15 +683,13 @@ def update_textbox(click_data):
     else:
         # Find the shape that was clicked
         clicked_shape_info = None
-        print(click_data)
         for shape in shapes:
             if (
                 shape['x0'] <= click_data['points'][0]['x'] and
                 shape['x1'] >= click_data['points'][0]['x']
             ):
-                print('got here')
                 clicked_shape_info = shape['name']
-                print(clicked_shape_info)
+
                 break
 
         if clicked_shape_info:
@@ -667,21 +701,34 @@ def update_textbox(click_data):
 @app.callback(
     Output('points-output', 'children'),
     [Input(mainGraph, 'clickData')],
+    State('switchView', 'n_clicks')
 
 
 )
-def display_coordinates(click_data):
+def display_coordinates(click_data, switchViewClicks):
+    if (switchViewClicks == None):
+        switchViewClicks = 0
 
-    if click_data is not None and 'points' in click_data:
-        point = click_data['points'][0]
-        x, y = point['x'], point['y']
-        global t
-        t = x
+    global t
 
-        return f'Time = {x}'
+    if (switchViewClicks % 2 == 0):
+        if click_data is not None and 'points' in click_data:
+            point = click_data['points'][0]
 
-    else:
-        return 'Click on a point to display its coordinates',
+            t = point['x']
+
+            return f'Time = {t}'
+
+        else:
+            return 'Click on a point to display its coordinates',
+    elif (switchViewClicks % 2 == 1):
+        if click_data is not None and 'points' in click_data:
+            point = click_data['points'][0]
+            t = point['pointNumber']
+            return f'Time = {t}'
+
+        else:
+            return 'Click on a point to display its coordinates',
 
 
 @app.callback(
@@ -697,7 +744,7 @@ def selectDeselectAll(selectClicks, deselectClicks):
     if deselectClicks == None:
         deselectClicks = 0
     if selectClicks == 1:
-        return data.columns, 0, 0
+        return data.columns[1:], 0, 0
     else:
         return [], 0, 0
 

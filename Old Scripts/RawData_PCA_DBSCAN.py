@@ -19,7 +19,7 @@ import pandas as pd
 
 # Read raw data
 df = pd.read_csv(
-    "RawData.csv"
+    "Data/RawData.csv"
 )
 
 fig_timeGraph = px.line(df, x='Time', y='sens1')

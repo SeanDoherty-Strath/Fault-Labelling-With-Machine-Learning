@@ -10,8 +10,8 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.neighbors import NearestNeighbors
 
 
-df = pd.read_csv("Data/dTenesseeEastemen_FaultyTraining_Subsection.csv")
-df = df.iloc[:, 3:6]
+df = pd.read_csv("Data/UpdatedData.csv")
+df = df.iloc[:, 4:7]
 
 # To INFER the number of important components:
 # pca = PCA(n_components="mle", svd_solver="full")

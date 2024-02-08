@@ -60,7 +60,7 @@ mainGraph = dcc.Graph(figure=fig)
 
 alert = dbc.Alert(
     "WARNING: This is not ok",
-    is_open=False,
+    is_open=True,
     duration=4000,
     color="lightblue",
     style={
@@ -80,10 +80,10 @@ alert = dbc.Alert(
 
 
 # Box 1
-sensorDropdown = dcc.Checklist(options=data.columns, style={
+sensorDropdown = dcc.Checklist(options=data.columns, value=['xmeas_1'], style={
                                'fontsize': 18, 'fontFamily': 'Comic Sans MS'}, inline=True, labelStyle={'width': '50%'})
-sensorHeader = dcc.Markdown(children='Sensors', style={
-                            'fontsize': 30, 'fontWeight': 'bold', 'textAlign': 'center', 'fontFamily': 'Comic Sans MS'})
+sensorHeader = dcc.Markdown('Sensors', style={
+    'fontSize': 26, 'fontWeight': 'bold', 'textAlign': 'center', })
 xAxis_dropdown_3D = dcc.Dropdown(value=data.columns[0], options=data.columns)
 yAxis_dropdown_3D = dcc.Dropdown(value=data.columns[1], options=data.columns)
 zAxis_dropdown_3D = dcc.Dropdown(value=data.columns[2], options=data.columns)
@@ -166,13 +166,16 @@ stat3 = dcc.Markdown('Data points unlabelled: ', style={'margin': '0'})
 
 
 AI_header = dcc.Markdown('Auto Label', style={
-                         'fontSize': 20, 'fontWeight': 'bold', 'textAlign': 'center', })
-AI_text1 = dcc.Markdown('Clustering Method:', style={'width': '50%'})
+                         'fontSize': 26, 'fontWeight': 'bold', 'textAlign': 'center', })
+AI_text1 = dcc.Markdown('Clustering Method:', style={
+                        'width': '50%', 'margin-left': 10, })
 AI_input1 = dcc.Input(id='AI-input1', type='number', value='K')
 AI_input2 = dcc.Input(id='AI-input2', type='number', value='Empty')
-clusterMethod = dcc.Dropdown(options=['K Means', 'DBSCAN'], value='K Means',)
+clusterMethod = dcc.Dropdown(
+    options=['K Means', 'DBSCAN'], value='K Means', style={'width': '100%'})
 AI_text2 = dcc.Markdown('Reduction Algorithm:')
-reductionMethod = dcc.Dropdown(options=["PCA", "Autoencoding", "None"])
+reductionMethod = dcc.Dropdown(
+    options=["PCA", "Autoencoding", "None"], style={'width': '100%'})
 AI_input3 = dcc.Input(id='AI-input1', type='number',)
 AI_input4 = dcc.Input(id='AI-input2', type='number',)
 AI_checkbox = dcc.Checklist(id='AI-checkbox', options=data.columns, )
@@ -183,14 +186,18 @@ exportHeader = html.H3('Export to CSV')
 exportName = dcc.Input(
     id='file-name',
     type='text',
-    style={'width': '90%'}
+    value='Filename',
+    style={'width': '100%', 'height': 30, 'fontSize': 20
+           }
 )
+
 exportLocation = dcc.Input(
     id='file-location',
     type='text',
     value='File Location',
-    style={'width': '90%'}
+    style={}
 )
 exportConfirm = html.Button(
-    'Export Now'
+    'Export',
+    style={'width': '20%', 'height': 30}
 )
