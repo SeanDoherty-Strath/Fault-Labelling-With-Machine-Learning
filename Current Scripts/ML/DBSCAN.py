@@ -6,10 +6,10 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.neighbors import NearestNeighbors
 import pandas as pd
 
-# Import data set
-df = pd.read_csv("TenesseeEastemen_FaultyTraining_Subsection.csv")
-df = df.iloc[:, 3:5]
-df = StandardScaler().fit_transform(df)
+
+data = pd.read_csv("Data/UpdatedData.csv")
+data = data.drop(data.columns[[0, 1, 2, 3]], axis=1)  # Remove extra columns
+df = StandardScaler().fit_transform(data)
 
 # Calculate the k-distance graph
 min = 5
@@ -21,11 +21,18 @@ distances = distances[:, 1]
 knee_point = np.argmax(np.diff(distances, 2)) + 2
 optimal_eps = distances[knee_point]
 
+optimal_eps = distances[knee_point]
+
+print('Optimal Knee Point', knee_point)
+print("Optimal Epsilon:", optimal_eps)
+
 
 # Plot the k-distance graph
-plt.plot(distances)
+plt.plot(distances, 'red')
 plt.xlabel("Data Points")
 plt.ylabel("Epsilon")
+plt.plot([19999], [0.5857939695444525], 'blue')
+plt.plot([19999], [0.5857939695444525], 'blue')
 plt.title("K-distance Graph")
 plt.show()
 
@@ -39,12 +46,6 @@ knee_point = np.argmax(np.diff(distances, 2)) + 2
 
 # I think a better solution wil be to eps from eyeseight... although this mght be hard to scale
 
-optimal_eps = distances[knee_point]
-
-print("Optimal Epsilon:", optimal_eps)
-
-# optimal_eps = 0.2
-print("Graphical optimal eps: ", optimal_eps)
 
 # Now, use the optimal_eps in DBSCAN
 dbscan = DBSCAN(eps=optimal_eps, min_samples=min)

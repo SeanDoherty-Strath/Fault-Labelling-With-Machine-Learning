@@ -17,7 +17,7 @@ from dash.exceptions import PreventUpdate
 # Internal Components and Functions
 from Components import mainGraph, zoom, pan, fourGraphs, xAxis_dropdown_3D, yAxis_dropdown_3D, zAxis_dropdown_3D, stats, faultFinder, alert, AI_checkbox
 from Components import title, sensorDropdown, sensorHeader, labelDropdown, stat3, faultFinderHeader, faultFinderText, stat1, stat2, exportName, exportHeader, exportLocation, exportConfirm, AI_header, AI_text1, clusterMethod, AI_text2, reductionMethod, AI_input1, AI_input2, AI_input3, AI_input4
-from myFunctions import changeText, updateGraph, performKMeans, performPCA
+from myFunctions import changeText, updateGraph, performKMeans, performPCA, performDBSCAN, findBestParams
 
 app = dash.Dash(__name__)
 
@@ -577,6 +577,14 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
                         else:
                             labels = performKMeans(df, K)
 
+                elif (clusterMethod == 'DBSCAN'):
+                    # left in for wrong input
+                    if (False):
+                        alert = True
+                        alertMessage = 'Wrong value input for K Means. Clustering has failed.'
+                    else:
+                        labels = performDBSCAN(df)
+
                 shapes = []
                 x0 = 0
                 x1 = x0
@@ -590,7 +598,7 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
                     if labels[i] != labels[i-1]:
 
                         x1 = i
-                        print(labels[x0])
+
                         shapes.append({
                             'type': 'rect',
                             'x0': x0,
