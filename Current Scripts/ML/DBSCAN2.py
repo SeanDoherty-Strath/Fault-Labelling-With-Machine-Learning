@@ -31,13 +31,12 @@ def findBestParams():
             dbscan = DBSCAN(eps=eps_value, min_samples=min_samples_value)
             cluster_labels = dbscan.fit_predict(X)
 
-            print(cluster_labels)
-            print(len(list(set(cluster_labels))))
             if (len(list(set(cluster_labels))) != 1):
 
                 # Compute silhouette score
                 score = silhouette_score(X, cluster_labels)
-
+                print(score)
+                
             # Update best score and parameters if necessary
                 if score > best_score:
                     best_score = score

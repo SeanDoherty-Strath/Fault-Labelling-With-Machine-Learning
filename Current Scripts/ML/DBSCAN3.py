@@ -6,55 +6,7 @@ from sklearn.decomposition import PCA
 from sklearn.cluster import DBSCAN
 import numpy as np
 from sklearn.metrics import silhouette_score
-
-
-def changeText(text):
-    return text
-
-
-def updateGraph(value, data):
-    fig = px.line(data, y=value)
-
-
-sensors = []
-for i in range(52):
-    temp = 'Sensor' + str(i)
-    sensors.append(temp)
-    # print(sensors)
-
-print(sensors)
-
-
-def performPCA(df, n):
-    print('Perform PCA')
-    scaler = StandardScaler()
-    scaled_data = scaler.fit_transform(df)
-
-    pca = PCA(n_components=n)
-    principal_components = pca.fit_transform(scaled_data)
-
-    columns = []
-    for i in range(n):
-
-        columns.append('PCA' + str(i))
-    principal_df = pd.DataFrame(
-        data=principal_components, columns=columns)
-    return principal_df
-
-
-def performKMeans(df, k):
-
-    # Create a KMeans instance
-    kmeans = KMeans(n_clusters=k, n_init="auto")
-
-    # Fit the model to the data
-    kmeans.fit(df)
-
-    # Get the cluster labels and centroids
-    labelArray = kmeans.labels_
-    labels = labelArray.tolist()
-
-    return labels
+import matplotlib.pyplot as plt
 
 
 def findBestParams(data):
@@ -73,33 +25,24 @@ def findBestParams(data):
             # Perform DBSCAN clustering
             dbscan = DBSCAN(eps=eps_value, min_samples=min_samples_value)
             cluster_labels = dbscan.fit_predict(data)
-            print(cluster_labels)
 
             numberOfLabels = len(list(set(cluster_labels)))
+            print('Number of labels: ', numberOfLabels)
 
-            if (numberOfLabels != 1):
+            if (len(list(set(cluster_labels))) != 1):
 
                 # Compute silhouette score
                 score = silhouette_score(data, cluster_labels)
                 print(score)
 
             # Update best score and parameters if necessary
-                minimumClusterSize = True
-                myList = []
-                for i in range(min(cluster_labels), 1+max(cluster_labels)):
-                    myList = cluster_labels.tolist()
-                    if myList.count(i) < 20:
-                        minimumClusterSize = False
-                if score > best_score and numberOfLabels >= 4 and numberOfLabels < 10 and minimumClusterSize:
-
+                if score > best_score and numberOfLabels >= 3 and numberOfLabels <= 10:
                     best_score = score
                     best_eps = eps_value
                     best_min_samples = min_samples_value
+    print('Best EPS: ', best_eps)
+    print('Best Min Samples: ', best_min_samples)
     return best_eps, best_min_samples
-
-    print("Best silhouette score:", best_score)
-    print("Best eps:", best_eps)
-    print("Best min_samples:", best_min_samples)
 
 
 def performDBSCAN(data):
@@ -117,3 +60,14 @@ def performDBSCAN(data):
     print('Number of labels: ', len(set(labels)))
     print('Min: ', min(set(labels)))
     return labels
+
+
+# DATA
+data = pd.read_csv("Data/UpdatedData.csv")
+data = data.drop(data.columns[[0, 1, 2, 3]], axis=1)  # Remove extra columns
+
+labels = performDBSCAN(data)
+# Visualize the clusters
+plt.scatter(data[:, 0], data[:, 1], c=labels, cmap="viridis")
+plt.title("DBSCAN Clustering with Optimal Epsilon")
+plt.show()
