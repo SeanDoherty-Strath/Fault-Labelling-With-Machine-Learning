@@ -60,8 +60,8 @@ def performKMeans(df, k):
 def findBestParams(data):
     # Define a range of epsilon values and min_samples values to search
 
-    eps_range = np.arange(30, 50, 5)
-    min_samples_range = range(1, 5)
+    eps_range = np.arange(10, 50, 10)
+    min_samples_range = range(1, 5, 2)
 
     best_score = -1
     best_eps = None
@@ -86,10 +86,10 @@ def findBestParams(data):
             # Update best score and parameters if necessary
                 minimumClusterSize = True
                 myList = []
-                for i in range(min(cluster_labels), 1+max(cluster_labels)):
-                    myList = cluster_labels.tolist()
-                    if myList.count(i) < 20:
-                        minimumClusterSize = False
+                # for i in range(min(cluster_labels), 1+max(cluster_labels)):
+                #     myList = cluster_labels.tolist()
+                #     if myList.count(i) < 20:
+                #         minimumClusterSize = False
                 if score > best_score and numberOfLabels >= 4 and numberOfLabels < 10 and minimumClusterSize:
 
                     best_score = score
