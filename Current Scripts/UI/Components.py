@@ -17,7 +17,7 @@ title = html.H1(children='Fault Labeller', style={
 # Main Graph
 fig = px.line()
 fig.update_layout()
-mainGraph = dcc.Graph(figure=fig, style={'flex': 1})
+mainGraph = dcc.Graph(figure=fig, style={'width': '100%'})
 # mainGraph = dcc.Graph(figure=fig, config={'editable': False, 'edits': {'shapePosition': True}},)
 
 
@@ -101,8 +101,11 @@ faultFinder = dcc.Dropdown(value='Unlabelled Data Point', options=[
 
 
 # Box 4
-labelDropdown = dcc.Dropdown(value='No Fault', options=[
-                             'Fault 1', 'Fault 2', 'Fault 3', 'No Fault'])
+labelDropdown = dcc.Dropdown(value=0, options=[
+    {'label': 'No Fault (green)', 'value': 0},
+    {'label': 'Fault 1 (Red)', 'value': 1},
+    {'label': 'Fault 2 (orange)', 'value': 2},
+    {'label': 'Fault 2 (yellow)', 'value': 3}])
 
 
 # Multi-Graph View

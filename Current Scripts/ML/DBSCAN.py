@@ -8,8 +8,8 @@ import pandas as pd
 
 
 data = pd.read_csv("Data/UpdatedData.csv")
-data = data.drop(data.columns[[0, 1, 2, 3]], axis=1)  # Remove extra columns
-df = StandardScaler().fit_transform(data)
+df = data.drop(data.columns[[0, 1, 2, 3]], axis=1)  # Remove extra columns
+# df = StandardScaler().fit_transform(data)
 
 # Calculate the k-distance graph
 min = 5
@@ -21,7 +21,7 @@ distances = distances[:, 1]
 knee_point = np.argmax(np.diff(distances, 2)) + 2
 optimal_eps = distances[knee_point]
 
-optimal_eps = distances[knee_point]
+print(distances)
 
 print('Optimal Knee Point', knee_point)
 print("Optimal Epsilon:", optimal_eps)
@@ -31,13 +31,10 @@ print("Optimal Epsilon:", optimal_eps)
 plt.plot(distances, 'red')
 plt.xlabel("Data Points")
 plt.ylabel("Epsilon")
-plt.plot([19999], [0.5857939695444525], 'blue')
-plt.plot([19999], [0.5857939695444525], 'blue')
 plt.title("K-distance Graph")
 plt.show()
 
-# Find the knee point in the graph
-knee_point = np.argmax(np.diff(distances, 2)) + 2
+
 # NOTE: I am sceptical about this code. It always producing the same value (0.69)
 # I took it from a tutorial which explains it:
 # np.diff(distances, 2): This computes the second-order differences of the distances array.It is a way to identify points where the rate of change is changing i.e. a knee point

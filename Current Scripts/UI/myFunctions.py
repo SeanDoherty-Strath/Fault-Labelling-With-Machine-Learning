@@ -7,6 +7,7 @@ from sklearn.cluster import DBSCAN
 import numpy as np
 from sklearn.metrics import silhouette_score
 import math
+from sklearn.neighbors import NearestNeighbors
 
 
 def changeText(text):
@@ -110,20 +111,76 @@ def findBestParams(data, Range):
     print("Best min_samples:", best_min_samples)
 
 
-def performDBSCAN(data, eps, minVal):
-    # Perform DBSCAN clustering
+# def knee_point(X, k):
+#     # Fit a k-nearest neighbor model
+#     nn = NearestNeighbors(n_neighbors=k)
+#     nn.fit(X)
 
-    # short_df = data.iloc[::3]
-    print('Performing DBSCAN')
-    # Range = data.values.max() - data.values.min()
+#     # Compute distances to k-nearest neighbors
+#     distances, _ = nn.kneighbors(X)
+#     avg_distances = np.mean(distances, axis=1)
 
-    # best_eps, best_min_samples = findBestParams(data, Range)
+#     # Sort distances in ascending order
+#     sorted_distances = np.sort(avg_distances)
 
-    dbscan = DBSCAN(eps=eps, min_samples=minVal)
+#     # Calculate the first derivative
+#     derivative = np.diff(sorted_distances)
+
+#     # Find the knee point
+#     knee_point_index = np.argmax(derivative)
+#     knee_point_value = sorted_distances[knee_point_index]
+
+#     return knee_point_value
+
+def knee_point(X, k):
+    # Fit a k-nearest neighbor model
+    nn = NearestNeighbors(n_neighbors=k)
+    nn.fit(X)
+
+    # Compute distances to k-nearest neighbors
+    distances, _ = nn.kneighbors(X)
+    avg_distances = np.mean(distances, axis=1)
+
+    # Sort distances in ascending order
+    sorted_distances = np.sort(avg_distances)
+
+    # Calculate the cumulative distribution function
+    cdf = np.cumsum(sorted_distances)
+    cdf /= cdf[-1]
+
+    # Find the knee point
+    knee_point_index = np.argmax(cdf >= 0.9)
+    knee_point_value = sorted_distances[knee_point_index]
+
+    return knee_point_value
+
+
+def performDBSCAN(data, n):
+
+    eps = knee_point(data, n+1)
+
+    print('Eps: ', eps)
+
+    dbscan = DBSCAN(eps=eps, min_samples=n+1)
     dbscan.fit(data)
     labels = dbscan.labels_.tolist()
-
-    # Add cluster labels to the dataset
     print('Number of labels: ', len(set(labels)))
-    print('Min: ', min(set(labels)))
     return labels
+#     labels = dbscan.labels_.tolist()
+# def performDBSCAN(data, eps, minVal):
+#     # Perform DBSCAN clustering
+
+#     # short_df = data.iloc[::3]
+#     print('Performing DBSCAN')
+#     # Range = data.values.max() - data.values.min()
+
+#     # best_eps, best_min_samples = findBestParams(data, Range)
+
+#     dbscan = DBSCAN(eps=eps, min_samples=minVal)
+#     dbscan.fit(data)
+#     labels = dbscan.labels_.tolist()
+
+#     # Add cluster labels to the dataset
+#     print('Number of labels: ', len(set(labels)))
+#     print('Min: ', min(set(labels)))
+#     return labels

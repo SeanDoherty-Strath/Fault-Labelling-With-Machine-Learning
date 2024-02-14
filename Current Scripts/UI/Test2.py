@@ -1,58 +1,54 @@
 import dash
-from dash import dcc, html
-from dash.dependencies import Input, Output
+from dash import dcc, html, Input, Output
 import plotly.graph_objs as go
 
 app = dash.Dash(__name__)
 
-# Example data with x, y, z, and time values
-data = {'x': [1, 2, 3, 4],
-        'y': [10, 15, 13, 17],
-        'z': [5, 8, 11, 14],
-        'time': ['2024-01-30 12:00:00', '2024-01-30 12:15:00', '2024-01-30 12:30:00', '2024-01-30 12:45:00']}
-
-scatter_trace = go.Scatter3d(
-    x=data['x'],
-    y=data['y'],
-    z=data['z'],
-    mode='markers',
-    text=data['time'],  # Set time values as text labels
-    marker=dict(
-        size=10,
-        color='rgb(0, 0, 255)',
-        opacity=0.8
-    )
-)
-
 app.layout = html.Div([
     dcc.Graph(
-        id='scatter-plot',
+        id='3d-scatter-plot',
+        config={'editable': True},
         figure={
-            'data': [scatter_trace],
-            'layout': go.Layout(
-                title='3D Scatter Plot with Time',
-                scene=dict(
-                    xaxis=dict(title='X Axis'),
-                    yaxis=dict(title='Y Axis'),
-                    zaxis=dict(title='Z Axis')
+            'data': [
+                go.Scatter(
+                    x=[1, 2, 3, 4, 5],
+                    y=[5, 4, 3, 2, 1],
+                    mode='markers',
+                    marker={
+                        'size': 10,
+                        'opacity': 0.8,
+                    },
                 )
+            ],
+            'layout': go.Layout(
+                margin={'l': 0, 'r': 0, 'b': 0, 't': 0},
+                dragmode='lasso'
             )
         }
     ),
-    html.Div(id='hover-info')
+    html.Div(id='selected-points')
 ])
 
+
 @app.callback(
-    Output('hover-info', 'children'),
-    [Input('scatter-plot', 'hoverData')]
+    Output('selected-points', 'children'),
+    [Input('3d-scatter-plot', 'selectedData')]
 )
-def display_hover_info(hover_data):
-    if hover_data is not None and 'points' in hover_data:
-        point = hover_data['points'][0]
-        time_value = point['text']
-        return f'Hovered Point Time: {time_value}'
-    else:
-        return 'Hover over a point to display its time'
+def display_selected_data(selectedData):
+    if selectedData is None:
+        return "No points selected"
+
+    selected_points = selectedData['points']
+    print(selectedData)
+    if not selected_points:
+        return "No points selected"
+
+    output_text = "Selected points:\n\n"
+    for point in selected_points:
+        output_text += f"X: {point['x']}, Y: {point['y']}\n"
+
+    return dcc.Markdown(output_text)
+
 
 if __name__ == '__main__':
     app.run_server(debug=True)
