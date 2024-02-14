@@ -57,6 +57,7 @@ app.layout = html.Div(style={'background': 'linear-gradient(to bottom, blue, #00
         html.Button('Switch View', id='switchView'),
         html.Button(children='Observe Clusters',
                     id='observe-clusters'),
+        dcc.Markdown(id='temp', children='Hey'),
         html.Div(style={'flex-direction': 'row', 'display': 'flex', 'width': '100%', 'height': '100%', }, children=[
 
 
@@ -739,6 +740,18 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
     stat3 = 'No. Labels Placed: ', len(shapes)
 
     return fig, labelButtonTitle, 0, 0, 0, 0, stat1, stat2, stat3, alert, alertMessage, sensorDropdownStyle, 0, clusterDropdownOptions, clusterDropdownValue, ClusterDropdownContainer
+
+
+@app.callback(
+    Output('temp', 'children'),
+    Input('startAutoLabel', 'n_clicks'),
+    prevent_initial_call=True
+)
+def autoLabelOptions(startAutoLabelClicks):
+    global labels
+    autoLabelOptions = set(labels)
+    # autoLabelOptions = len(set(labels))
+    return str(autoLabelOptions)
 
 
 @app.callback(
