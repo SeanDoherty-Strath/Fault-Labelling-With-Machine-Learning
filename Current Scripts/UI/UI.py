@@ -57,8 +57,18 @@ app.layout = html.Div(style={'background': 'linear-gradient(to bottom, blue, #00
         html.Button('Switch View', id='switchView'),
         html.Button(children='Observe Clusters',
                     id='observe-clusters'),
-        mainGraph,
-        dcc.Checklist(id='clusterDropdown', options=[])
+        html.Div(style={'flex-direction': 'row', 'display': 'flex', 'width': '100%', 'height': '100%', }, children=[
+
+
+
+            mainGraph,
+            html.Div(id='ClusterDropdownContainer', style={"display": "block", 'flex': 0.5, 'height': '100%'}, children=[
+                dcc.Markdown("Show Clusters", style={
+                             'fontSize': 30, 'fontWeight': 'bold'}),
+                dcc.Checklist(id='clusterDropdown', options=[],
+                              style={}),
+            ])
+        ])
 
         # dcc.Graph(id='tempGraph')
         # zoom
@@ -155,6 +165,20 @@ app.layout = html.Div(style={'background': 'linear-gradient(to bottom, blue, #00
                 dcc.Input(type='number', id='reducedSize', style={
                     'align-self': 'center', 'width': '100%', 'height': '90%', 'fontSize': 20})
             ]),
+            html.Div(style={'display': 'flex', }, children=[
+                dcc.Markdown('Epsilon:', id='epsilon', style={
+                             'margin-left': 10, 'width': '50%'}),
+                html.Div(style={'width': '100%'}, children=[
+                    dcc.Slider(id='eps-slider', min=1, max=50,  marks={i: str(i) for i in range(1, 50, 5)}, step=1, value=32)]),
+            ]),
+            html.Div(style={'display': 'flex', }, children=[
+                dcc.Markdown('Min Value:', id='minVal', style={
+                             'margin-left': 10, 'width': '50%'}),
+                html.Div(style={'width': '100%'}, children=[
+                    dcc.Slider(id='minVal-slider', min=1, max=20,  marks={i: str(i) for i in range(1, 20, 2)}, step=1, value=9)]),
+            ]),
+
+
             dcc.Markdown('Sensors: ', style={
                 'fontSize': 22, 'fontWeight': 'bold', 'margin-left': 10, }),
             html.Div(style={'display': 'flex', }, children=[
@@ -274,6 +298,7 @@ def exportCSV(clicked, fileName):
     Output('startAutoLabel', 'n_clicks'),
     Output('clusterDropdown', 'options'),
     Output('clusterDropdown', 'value'),
+    Output('ClusterDropdownContainer', 'style'),
 
 
     Input(sensorDropdown, 'value'),
@@ -295,16 +320,19 @@ def exportCSV(clicked, fileName):
     Input('observe-clusters', 'n_clicks'),
     Input('clusterDropdown', 'options'),
     Input('clusterDropdown', 'value'),
+
     State('sensor-checklist', 'value'),
     State(clusterMethod, 'value'),
     State(reductionMethod, 'value'),
 
     State(mainGraph, 'relayoutData'),
     State('K', 'value'),
-    State('reducedSize', 'value')
+    State('reducedSize', 'value'),
+    State('eps-slider', 'value'),
+    State('minVal-slider', 'value')
 
 )
-def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButtonClicks, removeLabelClick, undoLabelClick, findPrevClicked, findNextClicked, faultFinder, clickData, xAxis_dropdown_3D, yAxis_dropdown_3D, zAxis_dropdown_3D, newAutoLabel, observeClusterClikcs, clusterDropdownOptions, clusterDropdownValue, sensorChecklist, clusterMethod, reductionMethod, relayoutData, K, reducedSize):
+def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButtonClicks, removeLabelClick, undoLabelClick, findPrevClicked, findNextClicked, faultFinder, clickData, xAxis_dropdown_3D, yAxis_dropdown_3D, zAxis_dropdown_3D, newAutoLabel, observeClusterClikcs, clusterDropdownOptions, clusterDropdownValue, sensorChecklist, clusterMethod, reductionMethod, relayoutData, K, reducedSize, eps, minVal):
     fig = px.line()
     global shapes
     global labels
@@ -335,6 +363,7 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
         findNextClicked = 0
 
     if (switchViewButtonClicks % 2 == 0):
+        ClusterDropdownContainer = {"display": "none"}
         maximum = 1
         selectData = []
         for i in range(len(sensorDropdown)):
@@ -583,7 +612,7 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
                         alert = True
                         alertMessage = 'Wrong value input for K Means. Clustering has failed.'
                     else:
-                        labels = performDBSCAN(df)
+                        labels = performDBSCAN(df, eps, minVal)
 
                 shapes = []
                 x0 = 0
@@ -592,47 +621,51 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
                 clusterDropdownOptions = list(set(labels))
                 clusterDropdownValue = clusterDropdownOptions
 
-                # labels = [0, 0, 0, 1, 1, 1, 2, 3, 4]
-                for i in range(1, len(labels)):
+                if (len(clusterDropdownOptions) > 10):
+                    alert = True
+                    alertMessage = "Auto Labelling produced too many clusters.  Try increasing epsilon or decreaseing minimum value."
+                else:
+                    # labels = [0, 0, 0, 1, 1, 1, 2, 3, 4]
+                    for i in range(1, len(labels)):
 
-                    if labels[i] != labels[i-1]:
+                        if labels[i] != labels[i-1]:
 
-                        x1 = i
+                            x1 = i
 
-                        shapes.append({
-                            'type': 'rect',
-                            'x0': x0,
-                            'x1': x1,
-                            'y0': 0,
-                            'y1': 0.05,
-                            'fillcolor': colours[labels[x0]][0],
-                            'yref': 'paper',
-                            'name': 'Operating Condition: ' + str(labels[x0])
-                        },)
+                            shapes.append({
+                                'type': 'rect',
+                                'x0': x0,
+                                'x1': x1,
+                                'y0': 0,
+                                'y1': 0.05,
+                                'fillcolor': colours[labels[x0]][0],
+                                'yref': 'paper',
+                                'name': 'Operating Condition: ' + str(labels[x0])
+                            },)
 
-                        x0 = i
-                if (labels[x0] == 0):
-                    color = 'green'
-                elif (labels[x0] == 1):
-                    color = 'blue'
-                elif (labels[x0] == 2):
-                    color = 'orange'
-                elif (labels[x0] == 3):
-                    color = 'yellow'
-                elif (labels[x0] == 4):
-                    color = 'red'
-                shapes.append({
-                    'type': 'rect',
-                            'x0': x0,
-                            'x1': len(labels),
-                            'y0': 0,
-                            'y1': 0.05,
-                            'fillcolor': colours[labels[x0]][0],
-                            'yref': 'paper',
-                            'name': 'AI_FAULT'
-                },)
-                x_0 = 0
-                x_1 = 20000
+                            x0 = i
+                    if (labels[x0] == 0):
+                        color = 'green'
+                    elif (labels[x0] == 1):
+                        color = 'blue'
+                    elif (labels[x0] == 2):
+                        color = 'orange'
+                    elif (labels[x0] == 3):
+                        color = 'yellow'
+                    elif (labels[x0] == 4):
+                        color = 'red'
+                    shapes.append({
+                        'type': 'rect',
+                                'x0': x0,
+                                'x1': len(labels),
+                                'y0': 0,
+                                'y1': 0.05,
+                                'fillcolor': colours[labels[x0]][0],
+                                'yref': 'paper',
+                                'name': 'AI_FAULT'
+                    },)
+                    x_0 = 0
+                    x_1 = 20000
 
         layout = go.Layout(legend={'x': 0, 'y': 1.2}, xaxis=dict(range=[x_0, x_1]), dragmode=dragMode, yaxis=dict(fixedrange=True, title='Sensor Value', color='blue'), yaxis2=dict(
             fixedrange=True, overlaying='y', color='orange', side='right'), yaxis3=dict(fixedrange=True, overlaying='y', color='green', side='left', position=0.001,), yaxis4=dict(fixedrange=True, overlaying='y', color='red', side='right'), shapes=shapes)
@@ -654,6 +687,7 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
         if (observeClusterClikcs % 2 == 0):
             df = data
             df['labels'] = labels
+            ClusterDropdownContainer = {"display": "none"}
             # fig = px.scatter_3d(data, x='xmeas_1', y='xmeas_2', z='xmeas_3', text='Unnamed: 0', color_discrete_sequence=['black'])
             fig = px.scatter_3d(df, x=xAxis_dropdown_3D, y=yAxis_dropdown_3D,
                                 z=zAxis_dropdown_3D, color='Time',  opacity=0.05)
@@ -665,6 +699,8 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
 
             sensorDropdownStyle = {'display': 'none'}
         elif (observeClusterClikcs % 2 == 1):
+            ClusterDropdownContainer = {
+                "display": "block", 'position': 'absolute', 'right': '30%'}
             labelButtonTitle = 'New Label'
 
             df = data
@@ -702,7 +738,7 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
     stat2 = 'No. Types Labels Placed: ', int(len(set(labels))-1)
     stat3 = 'No. Labels Placed: ', len(shapes)
 
-    return fig, labelButtonTitle, 0, 0, 0, 0, stat1, stat2, stat3, alert, alertMessage, sensorDropdownStyle, 0, clusterDropdownOptions, clusterDropdownValue
+    return fig, labelButtonTitle, 0, 0, 0, 0, stat1, stat2, stat3, alert, alertMessage, sensorDropdownStyle, 0, clusterDropdownOptions, clusterDropdownValue, ClusterDropdownContainer
 
 
 @app.callback(

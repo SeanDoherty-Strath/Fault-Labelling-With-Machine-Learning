@@ -17,7 +17,7 @@ title = html.H1(children='Fault Labeller', style={
 # Main Graph
 fig = px.line()
 fig.update_layout()
-mainGraph = dcc.Graph(figure=fig)
+mainGraph = dcc.Graph(figure=fig, style={'flex': 1})
 # mainGraph = dcc.Graph(figure=fig, config={'editable': False, 'edits': {'shapePosition': True}},)
 
 

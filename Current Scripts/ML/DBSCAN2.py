@@ -6,10 +6,29 @@ from sklearn.cluster import DBSCAN
 from sklearn import datasets
 import numpy as np
 from sklearn.metrics import silhouette_score
+import pandas as pd
+from sklearn.preprocessing import StandardScaler
+from sklearn.decomposition import PCA
 
 # Load sample data (you can replace this with your own dataset)
-iris = datasets.load_iris()
-X = iris.data
+# DATA
+data = pd.read_csv("Data/UpdatedData.csv")
+# data = data.drop(data.columns[[0, 1, 2, 3]], axis=1)  # Remove extra column
+data = data.iloc[:, 4:]  # Remove extra column
+
+scaler = StandardScaler()
+scaledData = scaler.fit_transform(data)
+X = pd.DataFrame(scaledData, columns=data.columns)
+
+
+pca = PCA(n_components=10)
+principal_components = pca.fit_transform(scaledData)
+
+columns = []
+for i in range(10):
+    columns.append('PCA' + str(i))
+principal_df = pd.DataFrame(data=principal_components, columns=columns)
+print(principal_df)
 
 # Initialize Dash app
 app = dash.Dash(__name__)
@@ -17,7 +36,7 @@ app = dash.Dash(__name__)
 
 def findBestParams():
     # Define a range of epsilon values and min_samples values to search
-    eps_range = np.arange(0.1, 2.1, 0.1)
+    eps_range = np.arange(1, 100, 10)
     min_samples_range = range(1, 11)
 
     best_score = -1
@@ -36,7 +55,7 @@ def findBestParams():
                 # Compute silhouette score
                 score = silhouette_score(X, cluster_labels)
                 print(score)
-                
+
             # Update best score and parameters if necessary
                 if score > best_score:
                     best_score = score
@@ -58,10 +77,10 @@ app.layout = html.Div([
     dcc.Slider(
         id='eps-slider',
         min=0.1,
-        max=2.0,
-        step=0.1,
-        value=0.5,
-        marks={i/10: str(i/10) for i in range(1, 21)},
+        max=10,
+        step=0.5,
+        value=0.1,
+        # marks={i/10: str(i/10) for i in range(1, 21)},
     ),
 
     # Dropdown for selecting min_samples value
@@ -72,7 +91,7 @@ app.layout = html.Div([
         max=10,
         step=1,
         value=3,
-        marks={i: str(i) for i in range(1, 11)},
+
     ),
 
     # Scatter plot for displaying clustering result
@@ -89,21 +108,24 @@ app.layout = html.Div([
 )
 def update_cluster_plot(eps_value, min_samples_value):
     # Perform DBSCAN clustering
-    best_eps, best_min_samples = findBestParams()
+    # best_eps, best_min_samples = findBestParams()
 
-    dbscan = DBSCAN(eps=best_eps, min_samples=best_min_samples)
-    dbscan.fit(X)
+    # dbscan = DBSCAN(eps=best_eps, min_samples=best_min_samples)
+    dbscan = DBSCAN(eps=eps_value, min_samples=min_samples_value)
+    dbscan.fit(principal_df)
 
     # Add cluster labels to the dataset
     cluster_labels = dbscan.labels_
 
     # Create a DataFrame with original data and cluster labels
-    clustered_data = px.data.iris()
+    clustered_data = principal_df
     clustered_data['cluster'] = cluster_labels
 
+    print(len(set(cluster_labels)))
+
     # Plot the clustered data
-    fig = px.scatter_3d(clustered_data, x='sepal_length', y='sepal_width', z='petal_width',
-                        color='cluster', symbol='species',
+    fig = px.scatter_3d(clustered_data, x='PCA0', y='PCA1', z='PCA2',
+                        color='cluster',
                         title=f'DBSCAN Clustering (eps={eps_value}, min_samples={min_samples_value})')
 
     return fig
