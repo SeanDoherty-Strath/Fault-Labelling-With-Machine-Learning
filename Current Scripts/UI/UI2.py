@@ -489,7 +489,7 @@ def labelScatter(selectedData, switchView, labelButton, figure, relayoutData, la
                         y=data.loc[:, sensorDropdown[i]], name=name, yaxis=yaxis, opacity=1-0.2*i))
 
                     # # This is neccesary to plot a line through the y-axis
-                    # if (data.loc[:, sensorDropdown[i]].max() > maximum):
+                    # if (data.loc[:, z  ensorDropdown[i]].max() > maximum):
                     #     maximum = data.loc[:, sensorDropdown[i]].max()
                 selectData.append(go.Scatter(
                     y=[0]*20000, name='Labels', mode='markers',
@@ -501,7 +501,7 @@ def labelScatter(selectedData, switchView, labelButton, figure, relayoutData, la
                         'color': [custom_colors[val] for val in data['labels']],
                     },))
 
-                figure = {'data': selectedData, 'layout': figure['layout']}
+                figure = {'data': selectData, 'layout': figure['layout']}
                 print(figure)
             return figure, 'New Label'
 
