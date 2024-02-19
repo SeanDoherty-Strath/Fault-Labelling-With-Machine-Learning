@@ -183,6 +183,25 @@ AI_input3 = dcc.Input(id='AI-input1', type='number',)
 AI_input4 = dcc.Input(id='AI-input2', type='number',)
 AI_checkbox = dcc.Checklist(id='AI-checkbox', options=data.columns, )
 
+uploadData = dcc.Upload(
+
+    children=html.Div([
+        'Drag and Drop or ',
+        html.A('Select Files')
+    ]),
+    style={
+        'width': '100%',
+        'height': '60px',
+        'lineHeight': '60px',
+        'borderWidth': '1px',
+        'borderStyle': 'dashed',
+        'borderRadius': '5px',
+        'textAlign': 'center',
+        'margin': '10px'
+    },
+    # Allow multiple files to be uploaded
+    multiple=False
+),
 
 exportHeader = html.H3('Export to CSV')
 

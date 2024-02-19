@@ -1,6 +1,9 @@
 import dash
-from dash import dcc, html, Input, Output
+from dash import dcc, html
+from dash.dependencies import Input, Output
 import pandas as pd
+import io
+import base64  # Import base64 module
 
 # Initialize the Dash app
 app = dash.Dash(__name__)
@@ -23,40 +26,34 @@ app.layout = html.Div([
             'textAlign': 'center',
             'margin': '10px'
         },
-        # Allow multiple files to be uploaded
-        multiple=True
+        multiple=False
     ),
     html.Div(id='output-data-upload')
 ])
 
-# Define callback to parse the contents of the uploaded CSV file
+# Define callback to parse CSV and update dataframe
+
+
 @app.callback(Output('output-data-upload', 'children'),
-              [Input('upload-data', 'contents')],
-              [dash.dependencies.State('upload-data', 'filename')])
-def update_output(contents, filenames):
+              [Input('upload-data', 'contents')])
+def update_output(contents):
     if contents is not None:
-        # Parse the CSV file
-        df = parse_contents(contents, filenames)
-        # Display the CSV content as a DataTable
+        content_type, content_string = contents.split(',')
+        decoded = io.StringIO(base64.b64decode(content_string).decode('utf-8'))
+        df = pd.read_csv(decoded)
         return html.Div([
-            html.H5(f'Uploaded File: {filenames}'),
+            html.H5('Uploaded File Content:'),
+            dcc.Textarea(
+                value=df.to_string(),
+                readOnly=True,
+                style={'width': '100%', 'height': '300px'}
+            ),
             html.Hr(),
-            html.Div([
-                dcc.DataTable(
-                    data=df.to_dict('rows'),
-                    columns=[{'name': i, 'id': i} for i in df.columns],
-                    style_table={'overflowX': 'scroll'},
-                )
-            ])
+            html.H5('Dataframe Info:'),
+            html.Pre(df.info())
         ])
 
-def parse_contents(contents, filenames):
-    content_type, content_string = contents[0].split(',')
-    decoded = base64.b64decode(content_string)
-    # Assume that the user uploaded a CSV file
-    df = pd.read_csv(io.StringIO(decoded.decode('utf-8')))
-    return df
 
-# Run the app
+# Run the Dash app
 if __name__ == '__main__':
     app.run_server(debug=True)

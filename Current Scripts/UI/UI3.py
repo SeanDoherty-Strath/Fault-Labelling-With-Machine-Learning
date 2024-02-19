@@ -12,11 +12,12 @@ import plotly.express as px
 import plotly.graph_objs as go
 import pandas as pd
 from dash.exceptions import PreventUpdate
-
+import io
+import base64  # Import base64 module
 
 # Internal Components and Functions
 from Components import mainGraph, zoom, pan, fourGraphs, xAxis_dropdown_3D, yAxis_dropdown_3D, zAxis_dropdown_3D, stats, faultFinder, alert, AI_checkbox
-from Components import title, sensorDropdown, sensorHeader, labelDropdown, stat3, faultFinderHeader, faultFinderText, stat1, stat2, exportName, exportHeader, exportLocation, exportConfirm, AI_header, AI_text1, clusterMethod, AI_text2, reductionMethod, AI_input1, AI_input2, AI_input3, AI_input4
+from Components import title, sensorDropdown, uploadData, sensorHeader, labelDropdown, stat3, faultFinderHeader, faultFinderText, stat1, stat2, exportName, exportHeader, exportLocation, exportConfirm, AI_header, AI_text1, clusterMethod, AI_text2, reductionMethod, AI_input1, AI_input2, AI_input3, AI_input4
 from myFunctions import changeText, updateGraph, performKMeans, performPCA, performDBSCAN, findBestParams, performAutoEncoding
 
 app = dash.Dash(__name__)
@@ -37,8 +38,8 @@ currentPoint = 0  # The current point, for navigation
 x_0 = 0
 x_1 = 5000
 
-colours = [['green'], ['red'], ['orange'], [
-    'yellow'], ['pink'], ['purple'], ['lavender'], ['blue'], ['brown'], ['grey']]
+colours = [['green'], ['red'], ['orange'], ['yellow'], ['pink'],
+           ['purple'], ['lavender'], ['blue'], ['brown'], ['magneta']]
 
 # t is used to switch between time based view and 3D based view
 t = None
@@ -255,6 +256,27 @@ app.layout = html.Div(style={'background': 'linear-gradient(to bottom, blue, #00
 
                     dcc.Download(
                         id="downloadData"),
+                    dcc.Upload(
+                        id='upload-data',
+                        children=html.Div([
+                            'Drag and Drop or ',
+                            html.A('Select Files')
+                        ]),
+                        style={
+                            'width': '100%',
+                            'height': '60px',
+                            'lineHeight': '60px',
+                            'borderWidth': '1px',
+                            'borderStyle': 'dashed',
+                            'borderRadius': '5px',
+                            'textAlign': 'center',
+                            'margin': '10px'
+                        },
+                        # Allow multiple files to be uploaded
+                        multiple=False
+                    ),
+
+                    dcc.Markdown(id='upload-data-text', children='')
 
 
                 ]
@@ -267,11 +289,14 @@ app.layout = html.Div(style={'background': 'linear-gradient(to bottom, blue, #00
 
 # This function limits sensors to 4 at a time
 @app.callback(
-    Output(sensorDropdown, 'value'),
-    Input(sensorDropdown, 'value')
+    Output(sensorDropdown, 'value', allow_duplicate=True),
+    Input(sensorDropdown, 'value'),
+    prevent_initial_call=True
 )
 def updatedText(values):
+
     if (values == None):
+
         return ['xmeas_1']
     if (len(values) > 4):
         values = values[1:]
@@ -286,8 +311,8 @@ def updatedText(values):
     Input(exportConfirm, 'n_clicks'),
     State(exportName, 'value')
 )
-def exportCSV(clicked, fileName):
-    if clicked is None:
+def exportCSV(exportClicked, fileName):
+    if exportClicked is None:
         raise PreventUpdate
 
     csv_filename = fileName + '.csv'
@@ -295,9 +320,54 @@ def exportCSV(clicked, fileName):
     return dcc.send_file(csv_filename)
 
 
+@app.callback(Output('upload-data-text', 'children'),
+              Output(sensorDropdown, 'options', allow_duplicate=True),
+              Output(sensorDropdown, 'value'),
+              Output('sensor-checklist', 'options', allow_duplicate=True),
+              Output(mainGraph, 'figure', allow_duplicate=True),
+              [Input('upload-data', 'contents')],
+              prevent_initial_call=True,)
+def update_output(contents):
+    global data
+    global shapes
+    global x_0
+    global x_1
+
+    if contents is not None:
+        print('contents', contents)
+        content_type, content_string = contents.split(',')
+        decoded = io.StringIO(base64.b64decode(content_string).decode('utf-8'))
+        data = pd.read_csv(decoded)
+        data['labels'] = data['labels'] = [-1]*data.shape[0]
+        print(data)
+
+        print(data.shape)
+        x_0 = 0
+        x_1 = data.shape[0]
+
+        shapes = []
+        layout = go.Layout(xaxis=dict(range=[x_0, x_1]))
+        print(data.columns[1])
+        return 'Success', data.columns, [data.columns[1]], data.columns, {'layout': layout}
+    else:
+        raise PreventUpdate
+    # return html.Div([
+    #     html.H5('Uploaded File Content:'),
+    #     dcc.Textarea(
+    #         value=df.to_string(),
+    #         readOnly=True,
+    #         style={'width': '100%', 'height': '300px'}
+    #     ),
+    #     html.Hr(),
+    #     html.H5('Dataframe Info:'),
+    #     html.Pre(df.info())
+    # ])
+
+
 # This (behemoth) function stores the majority of user features.
 # This is unavoidable, because all features which use 'mainGraph' must be in the same function
 # Proceed with caution...
+
 
 @app.callback(
 
@@ -350,7 +420,8 @@ def exportCSV(clicked, fileName):
     State('K', 'value'),
     State('reducedSize', 'value'),
     State('eps-slider', 'value'),
-    State('minVal-slider', 'value')
+    State('minVal-slider', 'value'),
+
 
 )
 def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButtonClicks, removeLabelClick, undoLabelClick, findPrevClicked, findNextClicked, faultFinder, clickData, xAxis_dropdown_3D, yAxis_dropdown_3D, zAxis_dropdown_3D, newAutoLabel, clusterDropdownOptions, clusterDropdownValue, sensorChecklist, clusterMethod, reductionMethod, relayoutData, K, reducedSize, eps, minVal):
@@ -388,7 +459,9 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
 
         # add data
         selectData = []
+
         for i in range(len(sensorDropdown)):
+
             name = sensorDropdown[i]
             yaxis = 'y' + str(i+1)
 
@@ -417,8 +490,8 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
 
                 if (x0 < 0):
                     x0 = 0
-                if (x1 > 20000):
-                    x1 = 20000
+                if (x1 > data.shape[0]):
+                    x1 = data.shape[0]
 
                 shapesToDelete = []
                 if shapes != []:
@@ -513,7 +586,7 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
                     alert = True
                     alertMessage = "No label exists"
                     x_0 = 0
-                    x_1 = 20000
+                    x_1 = data.shape[0]
                 else:
                     x_0 = start - round((end-start)*0.2)
                     x_1 = end + round((end-start)*0.2)
@@ -565,7 +638,7 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
                     alert = True
                     alertMessage = "No label exists"
                     x_0 = 0
-                    x_1 = 20000
+                    x_1 = data.shape[0]
                 else:
                     x_0 = start - round((end-start)*0.2)
                     x_1 = end + round((end-start)*0.2)
@@ -673,7 +746,8 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
                                 'name': 'area'+str(data['labels'][x0])
                     },)
                     x_0 = 0
-                    x_1 = 20000
+                    x_1 = data.shape[0]
+                    print('x_1 is ', x_1)
 
         layout = go.Layout(legend={'x': 0, 'y': 1.2}, xaxis=dict(range=[x_0, x_1]), dragmode=dragMode, yaxis=dict(fixedrange=True, title='Sensor Value', color='blue'), yaxis2=dict(
             fixedrange=True, overlaying='y', color='orange', side='right'), yaxis3=dict(fixedrange=True, overlaying='y', color='green', side='left', position=0.001,), yaxis4=dict(fixedrange=True, overlaying='y', color='red', side='right'), shapes=shapes)
@@ -711,7 +785,7 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
                     y1 = temp
 
                 for label in range(len(data['labels'])):
-                    if data['xmeas_1'][label] > x0 and data['xmeas_1'][label] < x1 and data['xmeas_2'][label] > y0 and data['xmeas_2'][label] < y1:
+                    if data[xAxis_dropdown_3D][label] > x0 and data[xAxis_dropdown_3D][label] < x1 and data[yAxis_dropdown_3D][label] > y0 and data[yAxis_dropdown_3D][label] < y1:
                         data.loc[label, 'labels'] = labelDropdown
 
         else:
@@ -720,7 +794,6 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
             dragMode = 'select'
 
         ClusterDropdownContainer = {"display": "none"}
-        # fig = px.scatter_3d(data, x='xmeas_1', y='xmeas_2', z='xmeas_3', text='Unnamed: 0', color_discrete_sequence=['black'])
 
         selectData = [go.Scatter(
             y=data.loc[:, yAxis_dropdown_3D], x=data.loc[:,
@@ -742,6 +815,97 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
         ClusterDropdownContainer = {
             "display": "block", 'flex': 0.5}
 
+        if (newAutoLabel == 1):
+            ClusterColourContainer = {
+                'display': 'block', 'width': 200, 'padding': 20}
+
+            if (sensorChecklist == []):
+                alert = True
+                alertMessage = 'Select sensors for auto-detection.'
+            else:
+                shapes = []
+                df = data.loc[:, sensorChecklist]
+
+                #
+                if (reductionMethod == 'PCA'):
+
+                    if (reducedSize == None or reducedSize < 2):
+                        alert = True
+                        alertMessage = 'Wrong value input for PCA. Data reduction has failed.'
+
+                    else:
+                        df = performPCA(df, reducedSize)
+                elif (reductionMethod == 'Auto-encoding'):
+
+                    df = performAutoEncoding(df)
+
+                if (clusterMethod == 'K Means'):
+                    if (K == None or K < 0):
+                        alert = True
+                        alertMessage = 'Wrong value input for K Means. Clustering has failed.'
+                    else:
+                        if (K > 10 or K <= 1):
+                            alert = True
+                            alertMessage = 'Select a value between 1 and 10 for K.'
+                        else:
+                            data['labels'] = performKMeans(df, K)
+
+                elif (clusterMethod == 'DBSCAN'):
+                    # left in for wrong input
+                    if (False):
+                        alert = True
+                        alertMessage = 'Wrong value input for K Means. Clustering has failed.'
+                    else:
+                        n = len(sensorChecklist)
+                        data['labels'] = performDBSCAN(df, n)
+
+                shapes = []
+                x0 = 0
+                x1 = x0
+
+                clusterDropdownOptions = list(set(data['labels']))
+                clusterDropdownValue = clusterDropdownOptions
+
+                if (len(clusterDropdownOptions) > 10):
+                    alert = True
+                    alertMessage = "Auto Labelling produced too many clusters.  Try increasing epsilon or decreaseing minimum value."
+                else:
+                    # labels = [0, 0, 0, 1, 1, 1, 2, 3, 4]
+                    for i in range(1, len(data['labels'])):
+
+                        if data['labels'][i] != data['labels'][i-1]:
+
+                            x1 = i
+
+                            shapes.append({
+                                'type': 'rect',
+                                'x0': x0,
+                                'x1': x1,
+                                'y0': 0,
+                                'y1': 0.05,
+                                # 'fillcolor': colours[labels[x0]][0],
+                                'fillcolor': 'white',
+                                'yref': 'paper',
+                                'name': 'area'+str(data['labels'][x0])
+                            },)
+
+                            x0 = i
+
+                    shapes.append({
+                        'type': 'rect',
+                                'x0': x0,
+                                'x1': len(data['labels']),
+                                'y0': 0,
+                                'y1': 0.05,
+                                # 'fillcolor': colours[labels[x0]][0],
+                                'fillcolor': 'white',
+                                'yref': 'paper',
+                                'name': 'area'+str(data['labels'][x0])
+                    },)
+                    x_0 = 0
+                    x_1 = data.shape[0]
+                    print('x_1 is ', x_1)
+
         selectData = [go.Scatter3d(y=data.loc[:, yAxis_dropdown_3D], z=data.loc[:,
                                                                                 zAxis_dropdown_3D], x=data.loc[:, xAxis_dropdown_3D], mode='markers',
                                    marker={
@@ -749,7 +913,8 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
             'opacity': 1,
             # 'color': 'red'
             # Set color based on 'labels' column
-            'color': [colours[val][0] for val in data['labels']],
+            # 'color': [colours[val][0] for val in data['labels']],
+            'color': 'grey'
         },)]
 
         layout = go.Layout()
@@ -810,7 +975,7 @@ def autoLabelOptions(startAutoLabelClicks):
                     {'label': 'No Fault (green)', 'value': 0},
                     {'label': 'Fault 1 (Red)', 'value': 1},
                     {'label': 'Fault 2 (orange)', 'value': 2},
-                    {'label': 'Fault 2 (yellow)', 'value': 3}]
+                    {'label': 'Fault 3 (yellow)', 'value': 3}]
             )
         )
 
@@ -831,7 +996,6 @@ def autoLabelOptions(startAutoLabelClicks):
 
 
 @app.callback(
-
     Output(mainGraph, 'figure', allow_duplicate=True),
     # Input('colorNow', 'n_clicks'),
     Input('dropdown-0', 'value'),
@@ -854,18 +1018,18 @@ def colorLabels(area0, area1, area2, area3, area4, area5, area6, area7, area8, a
     global x_0
     global x_1
 
-#     colors = [area0, area1, area2, area3, area4,
-#               area5, area6, area7, area8, area9]
-#     for i in range(len(colors)):
+    labels = [area0, area1, area2, area3, area4,
+              area5, area6, area7, area8, area9]
 
-#         if colors[i] == None or colors[i] == '':
-#             colors[i] = -1
+    # for i in range(len(colors)):
 
-    for color in colors:
-
-        for shape in shapes:
-            if shape['name'] == 'area'+str(color):
-                shape['fillcolor'] = colours[color][0]
+    #     if colors[i] == None or colors[i] == '':
+    #         colors[i] = -1
+    for shape in shapes:
+        for newLabel in labels:
+            if shape['name'] == 'area'+str(labels):
+                shape['fillcolor'] = colours[labels][0]
+                shape['name'] = labels
 
     if relayoutData and 'xaxis.range[0]' in relayoutData.keys():
         x_0 = relayoutData.get('xaxis.range[0]')
@@ -951,11 +1115,12 @@ def update_textbox(click_data, switchViewClicks):
 
 
 @app.callback(
-    Output('sensor-checklist', 'value'),
+    Output('sensor-checklist', 'value', allow_duplicate=True),
     Output('select-all', 'n_clicks'),
     Output('deselect-all', 'n_clicks'),
     Input('select-all', 'n_clicks'),
-    Input('deselect-all', 'n_clicks')
+    Input('deselect-all', 'n_clicks'),
+    prevent_initial_call=True
 )
 def selectDeselectAll(selectClicks, deselectClicks):
     if selectClicks == None:
