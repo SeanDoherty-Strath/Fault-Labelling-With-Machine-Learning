@@ -456,6 +456,7 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
                 clusterDropdownValue = clusterDropdownOptions
 
         elif (labelButtonClicks % 2 == 1):
+
             dragMode = 'select'
             labelButtonTitle = "Confirm Label"
 
@@ -853,12 +854,12 @@ def colorLabels(area0, area1, area2, area3, area4, area5, area6, area7, area8, a
     global x_0
     global x_1
 
-    colors = [area0, area1, area2, area3, area4,
-              area5, area6, area7, area8, area9]
-    for i in range(len(colors)):
+#     colors = [area0, area1, area2, area3, area4,
+#               area5, area6, area7, area8, area9]
+#     for i in range(len(colors)):
 
-        if colors[i] == None or colors[i] == '':
-            colors[i] = -1
+#         if colors[i] == None or colors[i] == '':
+#             colors[i] = -1
 
     for color in colors:
 
