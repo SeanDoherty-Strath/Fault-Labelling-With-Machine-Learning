@@ -8,6 +8,18 @@ import numpy as np
 from sklearn.metrics import silhouette_score
 import math
 from sklearn.neighbors import NearestNeighbors
+from keras import layers
+import matplotlib.pyplot as plt
+import numpy as np
+import keras
+from keras import layers
+import pandas as pd
+from sklearn.model_selection import KFold
+from sklearn.metrics import mean_absolute_error
+
+data = pd.read_csv("Data/UpdatedData.csv")
+data = data.drop(data.columns[[0, 1, 2, 3]], axis=1)  # Remove extra columns
+# data = data.rename(columns={'Unnamed: 0': 'Time'})  # Rename First Column
 
 
 def changeText(text):
@@ -184,3 +196,141 @@ def performDBSCAN(data, n):
 #     print('Number of labels: ', len(set(labels)))
 #     print('Min: ', min(set(labels)))
 #     return labels
+
+
+def performAutoEncoding(data):
+
+    # Extract  values from df
+    # data = pd.DataFrame(data_array)
+    # rawValues = data.values()
+
+    # Standardize data
+    scaler = StandardScaler()
+    normalized_values = scaler.fit_transform(data)
+
+    # Create new df with the normalized values
+    data = pd.DataFrame(normalized_values, columns=data.columns)
+
+    # return data
+    length = data.shape[1]
+
+    # Define the dimensions
+    input_output_dimension = length
+    hidden_layer_dimension = round(length/2)
+    encoding_dimension = round(length/4)
+
+    # INPUT LAYER
+    input_layer = keras.Input(shape=(input_output_dimension,))
+    # input_layer = layers.Dropout(0.2)(input_layer)
+
+    # ENCODER
+    encoder = layers.Dense(hidden_layer_dimension,
+                           activation='relu',)(input_layer)
+    # encoder = layers.Dropout(0.2)(encoder)
+    encoder = layers.Dense(encoding_dimension, activation='relu')(encoder)
+
+    # DECODER
+    decoder = layers.Dense(hidden_layer_dimension, activation='relu')(encoder)
+    # decoder = layers.Dropout(0.2)(decoder)
+    decoder = layers.Dense(input_output_dimension,
+                           activation='sigmoid')(decoder)
+
+    # AUTOENCODER
+    autoencoder = keras.Model(inputs=input_layer, outputs=decoder)
+
+    # COMPILE MODEL
+    autoencoder.compile(optimizer='adam', loss='mse')
+    # autoencoder.compile(optimizer='adam', loss='binary_crossentropy')
+
+    # Record losses and epochs during training
+    num_epochs = 100
+    epochs = []
+    losses = []
+
+    #  prepare  input data.
+    xTrain = data.iloc[:16000, :]  # first 4/5 for training
+    xTest = data.iloc[16000:, :]  # final 1/5  for testing
+    # This would be better by picking every 4th value or a random 4/5s
+
+    losses = []
+    epochs = []
+
+    # Callback to record loss and epochs during training
+
+    class LossHistory(keras.callbacks.Callback):
+        def on_epoch_end(self, epoch, logs=None):
+            epochs.append(epoch)
+            losses.append(logs['loss'])
+
+    autoencoder.fit(xTrain, xTrain, epochs=num_epochs, shuffle=True,
+                    validation_data=(xTest, xTest), callbacks=[LossHistory()])
+
+    plt.plot(epochs, losses, label='Training Loss')
+    plt.xlabel('Epochs')
+    plt.ylabel('Loss')
+    plt.title('Loss vs. Epochs')
+    plt.legend()
+    plt.show()
+
+    # # Option 2: Time series
+    # plt.figure(figsize=(20, 4))
+
+    # for i in range(5):
+    #     # Display original
+    #     ax = plt.subplot(2, 5, i + 1)
+    #     plt.plot(testDF.iloc[:960, i])
+    #     plt.ylim(0, 1)
+
+    #     title = 'xmeas' + str(i)
+    #     ax.set_title(title)
+
+    #     # Display reconstruction
+    #     ax = plt.subplot(2, 5, i + 1 + 5)
+    #     plt.plot(predictedData[:960, i])
+    #     plt.ylim(0, 1)
+    # plt.show()
+
+    autoencoder.summary()
+    # CONVERT TO LATENT SPACE
+
+    bottleneck = keras.Model(inputs=autoencoder.input,
+                             outputs=autoencoder.get_layer('dense_1').output)
+
+    # Assuming 'data' is your input data
+    # Transform data into the latent space
+    latentSpace = bottleneck.predict(data)
+    # encoder = keras.Model(inputs=autoencoder.input, outputs=autoencoder.get_layer('encoder_1').output)
+    # encoded = keras.Model(inputs=autoencoder.input, outputs=encoder)
+
+    # # Get the latent space representation for the input data
+    # latent_space = encoded.predict(df)
+
+    # print('Latent space', latent_space)
+    # print('Latent space size: ', np.shape(latent_space))
+
+    # # Create a 3D plot
+    # fig = plt.figure()
+    # ax = fig.add_subplot(111, projection='3d')
+
+    # # Scatter plot the points in the latent space
+    # # ax.scatter(latent_space[:, 3], latent_space[:, 4],
+    # #           latent_space[:, 5], marker='o', s=10, c='r')
+
+    # for i in range(0, encoding_dimension):
+    #     text = 'Latent space', i
+    #     print(text, latent_space[:, i])
+
+    # latentSpaceDF = pd.DataFrame(latent_space)
+    # filepath = Path('./LatentSpace.csv')
+
+    # latentSpaceDF.to_csv(filepath)
+
+    # ax.set_xlabel('Latent Dimension 1')
+    # ax.set_ylabel('Latent Dimension 2')
+    # ax.set_zlabel('Latent Dimension 3')
+
+    # plt.title('Latent Space Visualization')
+    # plt.show()
+    bottleneck_df = pd.DataFrame(
+        data=latentSpace)
+    return bottleneck_df

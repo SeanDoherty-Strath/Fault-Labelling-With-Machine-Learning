@@ -17,7 +17,7 @@ from dash.exceptions import PreventUpdate
 # Internal Components and Functions
 from Components import mainGraph, zoom, pan, fourGraphs, xAxis_dropdown_3D, yAxis_dropdown_3D, zAxis_dropdown_3D, stats, faultFinder, alert, AI_checkbox
 from Components import title, sensorDropdown, sensorHeader, labelDropdown, stat3, faultFinderHeader, faultFinderText, stat1, stat2, exportName, exportHeader, exportLocation, exportConfirm, AI_header, AI_text1, clusterMethod, AI_text2, reductionMethod, AI_input1, AI_input2, AI_input3, AI_input4
-from myFunctions import changeText, updateGraph, performKMeans, performPCA, performDBSCAN, findBestParams
+from myFunctions import changeText, updateGraph, performKMeans, performPCA, performDBSCAN, findBestParams, performAutoEncoding
 
 app = dash.Dash(__name__)
 
@@ -59,15 +59,12 @@ app.layout = html.Div(style={'background': 'linear-gradient(to bottom, blue, #00
 
         html.Div(style={'flex-direction': 'row', 'display': 'flex', 'width': '100%', 'height': '100%', }, children=[
 
-
-
-            mainGraph,
             html.Div(id='ClusterColourContainer', style={
-                     "display": "block", 'flex': 0.5, 'height': '100%'}, children=[
+                     "display": "none", 'flex': '1'}, children=[
                          dcc.Dropdown(
-                             style={'display': 'none'}, id=f'dropdown-0'),
+                             style={'display': 'none', }, id=f'dropdown-0'),
                          dcc.Dropdown(
-                             style={'display': 'none'}, id=f'dropdown-1'),
+                             style={'display': 'none'}, id='dropdown-1'),
                          dcc.Dropdown(
                              style={'display': 'none'}, id=f'dropdown-2'),
                          dcc.Dropdown(
@@ -84,10 +81,12 @@ app.layout = html.Div(style={'background': 'linear-gradient(to bottom, blue, #00
                              style={'display': 'none'}, id=f'dropdown-8'),
                          dcc.Dropdown(
                              style={'display': 'none'}, id=f'dropdown-9'),
+
             ]
             ),
+            mainGraph,
 
-            html.Div(id='ClusterDropdownContainer', style={"display": "block", 'flex': 0.5, 'height': '100%'}, children=[
+            html.Div(id='ClusterDropdownContainer', style={"display": "none"}, children=[
                 dcc.Markdown("Show Clusters", style={
                              'fontSize': 30, 'fontWeight': 'bold'}),
                 dcc.Checklist(id='clusterDropdown', options=[],
@@ -321,6 +320,7 @@ def exportCSV(clicked, fileName):
     Output('clusterDropdown', 'options'),
     Output('clusterDropdown', 'value'),
     Output('ClusterDropdownContainer', 'style'),
+    Output('ClusterColourContainer', 'style'),
 
 
     Input(sensorDropdown, 'value'),
@@ -366,6 +366,8 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
 
     alert = False
     alertMessage = ''
+
+    ClusterColourContainer = {'display': 'none'}
 
     if (switchViewButtonClicks == None):
         switchViewButtonClicks = 0
@@ -582,6 +584,9 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
 
         if (newAutoLabel == 1):
 
+            ClusterColourContainer = {
+                'display': 'block', 'width': 200, 'padding': 20}
+
             if (sensorChecklist == []):
                 alert = True
                 alertMessage = 'Select sensors for auto-detection.'
@@ -599,6 +604,9 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
 
                     else:
                         df = performPCA(df, reducedSize)
+                elif (reductionMethod == 'Auto-encoding'):
+
+                    df = performAutoEncoding(df)
 
                 if (clusterMethod == 'K Means'):
                     if (K == None or K < 0):
@@ -666,7 +674,6 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
                     x_0 = 0
                     x_1 = 20000
 
-        print('Dragmode: ', dragMode)
         layout = go.Layout(legend={'x': 0, 'y': 1.2}, xaxis=dict(range=[x_0, x_1]), dragmode=dragMode, yaxis=dict(fixedrange=True, title='Sensor Value', color='blue'), yaxis2=dict(
             fixedrange=True, overlaying='y', color='orange', side='right'), yaxis3=dict(fixedrange=True, overlaying='y', color='green', side='left', position=0.001,), yaxis4=dict(fixedrange=True, overlaying='y', color='red', side='right'), shapes=shapes)
 
@@ -705,10 +712,9 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
                 for label in range(len(data['labels'])):
                     if data['xmeas_1'][label] > x0 and data['xmeas_1'][label] < x1 and data['xmeas_2'][label] > y0 and data['xmeas_2'][label] < y1:
                         data.loc[label, 'labels'] = labelDropdown
-                        print('identified: ', label)
 
         else:
-            print('got here buddy')
+
             labelButtonTitle = 'Confirm Label'
             dragMode = 'select'
 
@@ -733,7 +739,7 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
         #  3D SCATTER PLOT
 
         ClusterDropdownContainer = {
-            "display": "block", 'position': 'absolute', 'right': '30%'}
+            "display": "block", 'flex': 0.5}
 
         selectData = [go.Scatter3d(y=data.loc[:, yAxis_dropdown_3D], z=data.loc[:,
                                                                                 zAxis_dropdown_3D], x=data.loc[:, xAxis_dropdown_3D], mode='markers',
@@ -781,7 +787,7 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
     stat2 = 'No. Types Labels Placed: ', int(len(set(labels))-1)
     stat3 = 'No. Labels Placed: ', len(shapes)
 
-    return fig, labelButtonTitle, 0, 0, 0, 0, stat1, stat2, stat3, alert, alertMessage, sensorDropdownStyle, 0, clusterDropdownOptions, clusterDropdownValue, ClusterDropdownContainer
+    return fig, labelButtonTitle, 0, 0, 0, 0, stat1, stat2, stat3, alert, alertMessage, sensorDropdownStyle, 0, clusterDropdownOptions, clusterDropdownValue, ClusterDropdownContainer, ClusterColourContainer
 
 
 @app.callback(
@@ -797,7 +803,7 @@ def autoLabelOptions(startAutoLabelClicks):
         )
         dropdowns.append(
             dcc.Dropdown(
-                style={'display': 'block'},
+                style={'display': 'block', 'width': 200},
                 id=f'dropdown-{i}',
                 options=[
                     {'label': 'No Fault (green)', 'value': 0},
@@ -806,6 +812,7 @@ def autoLabelOptions(startAutoLabelClicks):
                     {'label': 'Fault 2 (yellow)', 'value': 3}]
             )
         )
+
     for i in range(len(set(data['labels'])), 11):
         dropdowns.append(
             dcc.Markdown('Area ' + str(i+1), style={'display': 'none'},)
@@ -814,7 +821,6 @@ def autoLabelOptions(startAutoLabelClicks):
             dcc.Dropdown(
                 style={'display': 'none'},
                 id=f'dropdown-{i}',
-
 
                 options=[]
             )
@@ -826,6 +832,7 @@ def autoLabelOptions(startAutoLabelClicks):
 @app.callback(
 
     Output(mainGraph, 'figure', allow_duplicate=True),
+    # Input('colorNow', 'n_clicks'),
     Input('dropdown-0', 'value'),
     Input('dropdown-1', 'value'),
     Input('dropdown-2', 'value'),
@@ -837,10 +844,14 @@ def autoLabelOptions(startAutoLabelClicks):
     Input('dropdown-8', 'value'),
     Input('dropdown-9', 'value'),
     State(mainGraph, 'figure'),
+    State(mainGraph, 'relayoutData'),
     prevent_initial_call=True,
 
 )
-def colorLabels(area0, area1, area2, area3, area4, area5, area6, area7, area8, area9, figure):
+def colorLabels(area0, area1, area2, area3, area4, area5, area6, area7, area8, area9, figure, relayoutData):
+
+    global x_0
+    global x_1
 
     colors = [area0, area1, area2, area3, area4,
               area5, area6, area7, area8, area9]
@@ -849,42 +860,23 @@ def colorLabels(area0, area1, area2, area3, area4, area5, area6, area7, area8, a
         if colors[i] == None or colors[i] == '':
             colors[i] = -1
 
-    # for shape in shapes:
-    #     print(shape)
-    #     for j in range(10):
-    #         if shape.name == 'area'+str(j):
     for color in colors:
-        print('Color:')
-        print(color)
+
         for shape in shapes:
             if shape['name'] == 'area'+str(color):
                 shape['fillcolor'] = colours[color][0]
 
-    # x0 = 0
-    # for i in range(1, len(data['labels'])):
+    if relayoutData and 'xaxis.range[0]' in relayoutData.keys():
+        x_0 = relayoutData.get('xaxis.range[0]')
+        x_1 = relayoutData.get('xaxis.range[1]')
 
-    #     if data['labels'][i] != data['labels'][i-1]:
+    # layout = go.Layout(legend={'x': 0, 'y': 1.2}, xaxis=dict(range=[x_0, x_1]), dragmode='pan', yaxis=dict(fixedrange=True, title='Sensor Value', color='blue'), yaxis2=dict(
+    #     fixedrange=True, overlaying='y', color='orange', side='right'), yaxis3=dict(fixedrange=True, overlaying='y', color='green', side='left', position=0.001,), yaxis4=dict(fixedrange=True, overlaying='y', color='red', side='right'), shapes=shapes)
 
-    #         x1 = i
+    if 'shapes' in figure['layout']:
+        figure['layout']['shapes'] = shapes
 
-    #         shapes.append({
-    #             'type': 'rect',
-    #             'x0': x0,
-    #             'x1': x1,
-    #             'y0': 0,
-    #             'y1': 0.05,
-    #             # 'fillcolor': colours[labels[x0]][0],
-    #             # 'fillcolor': colors[data['labels'][x0]],
-    #             'fillcolor': [colours[val][0] for val in data['labels']],
-    #             'yref': 'paper',
-    #             'name': 'misc'})
-
-    #         x0 = i
-
-    layout = go.Layout(legend={'x': 0, 'y': 1.2}, xaxis=dict(range=[0, 20000]), dragmode='pan', yaxis=dict(fixedrange=True, title='Sensor Value', color='blue'), yaxis2=dict(
-        fixedrange=True, overlaying='y', color='orange', side='right'), yaxis3=dict(fixedrange=True, overlaying='y', color='green', side='left', position=0.001,), yaxis4=dict(fixedrange=True, overlaying='y', color='red', side='right'), shapes=shapes)
-
-    figure = {'data': figure['data'], 'layout': layout}
+    # figure = {'data': figure['data'], 'layout': layout}
 
     return figure
 
@@ -902,7 +894,7 @@ def display_coordinates(click_data, switchViewClicks):
 
     global t
 
-    if (switchViewClicks % 2 == 0):
+    if (switchViewClicks % 3 == 0):
         if click_data is not None and 'points' in click_data:
             point = click_data['points'][0]
 
@@ -912,7 +904,7 @@ def display_coordinates(click_data, switchViewClicks):
 
         else:
             return 'Click on a point to display its coordinates',
-    elif (switchViewClicks % 2 == 1):
+    elif (switchViewClicks % 3 == 2):
         if click_data is not None and 'points' in click_data:
             point = click_data['points'][0]
             t = point['pointNumber']
@@ -935,7 +927,7 @@ def update_textbox(click_data, switchViewClicks):
         return "Click on a shape to see its information"
     else:
 
-        if (switchViewClicks % 2 == 0):
+        if (switchViewClicks % 3 == 0):
             # Find the shape that was clicked
             clicked_shape_info = None
             for shape in shapes:
@@ -951,7 +943,9 @@ def update_textbox(click_data, switchViewClicks):
                 return f"Clicked Shape Info: {clicked_shape_info}"
             else:
                 return "No shape clicked"
-        elif (switchViewClicks % 2 == 1):
+        elif (switchViewClicks % 3 == 1):
+            return '2D Plot'
+        elif (switchViewClicks % 3 == 2):
             return '3D Plot'
 
 
@@ -978,7 +972,7 @@ def selectDeselectAll(selectClicks, deselectClicks):
     Output('reducedSize', 'style'),
     Output('reducedSizeMarkdown', 'style'),
     Output('kMeansMarkdown', 'style'),
-    Output('ClusterColourContainer', 'style'),
+
 
     Input(clusterMethod, 'value'),
     Input(reductionMethod, 'value'),
@@ -990,17 +984,9 @@ def autoLabelStyles(clusterMethod, reductionMethod, switchView):
     kMeansMarkdown = {'display': 'none'}
     reducedStyle_style = {'display': 'none'}
     reducedSizeMarkdown = {'display': 'none'}
-    ClusterColourContainer = {'display': 'none'}
 
     if switchView == None:
         switchView = 0
-
-    if (switchView % 2 == 0):
-
-        ClusterColourContainer = {
-            "display": "block", 'flex': 0.2, 'height': '100%'}
-    else:
-        ClusterColourContainer = {'display': 'none'}
 
     if (clusterMethod == 'K Means'):
         K_style = {'display': 'block', 'align-self': 'center',
@@ -1014,7 +1000,7 @@ def autoLabelStyles(clusterMethod, reductionMethod, switchView):
         reducedSizeMarkdown = {'display': 'block',
                                'margin-left': 10, 'width': '50%'}
 
-    return K_style, reducedStyle_style, reducedSizeMarkdown, kMeansMarkdown, ClusterColourContainer
+    return K_style, reducedStyle_style, reducedSizeMarkdown, kMeansMarkdown
 
 
 # Run the app
