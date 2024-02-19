@@ -454,6 +454,7 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
                 clusterDropdownValue = clusterDropdownOptions
 
         elif (labelButtonClicks % 2 == 1):
+            
             dragMode = 'select'
             labelButtonTitle = "Confirm Label"
 
@@ -823,70 +824,69 @@ def autoLabelOptions(startAutoLabelClicks):
     return dropdowns
 
 
-@app.callback(
+# @app.callback(
 
-    Output(mainGraph, 'figure', allow_duplicate=True),
-    Input('dropdown-0', 'value'),
-    Input('dropdown-1', 'value'),
-    Input('dropdown-2', 'value'),
-    Input('dropdown-3', 'value'),
-    Input('dropdown-4', 'value'),
-    Input('dropdown-5', 'value'),
-    Input('dropdown-6', 'value'),
-    Input('dropdown-7', 'value'),
-    Input('dropdown-8', 'value'),
-    Input('dropdown-9', 'value'),
-    State(mainGraph, 'figure'),
-    prevent_initial_call=True,
+#     Output(mainGraph, 'figure', allow_duplicate=True),
+#     Input('dropdown-0', 'value'),
+#     Input('dropdown-1', 'value'),
+#     Input('dropdown-2', 'value'),
+#     Input('dropdown-3', 'value'),
+#     Input('dropdown-4', 'value'),
+#     Input('dropdown-5', 'value'),
+#     Input('dropdown-6', 'value'),
+#     Input('dropdown-7', 'value'),
+#     Input('dropdown-8', 'value'),
+#     Input('dropdown-9', 'value'),
+#     State(mainGraph, 'figure'),
+#     prevent_initial_call=True,
 
-)
-def colorLabels(area0, area1, area2, area3, area4, area5, area6, area7, area8, area9, figure):
+# )
+# def colorLabels(area0, area1, area2, area3, area4, area5, area6, area7, area8, area9, figure):
 
-    colors = [area0, area1, area2, area3, area4,
-              area5, area6, area7, area8, area9]
-    for i in range(len(colors)):
+#     colors = [area0, area1, area2, area3, area4,
+#               area5, area6, area7, area8, area9]
+#     for i in range(len(colors)):
 
-        if colors[i] == None or colors[i] == '':
-            colors[i] = -1
+#         if colors[i] == None or colors[i] == '':
+#             colors[i] = -1
 
-    # for shape in shapes:
-    #     print(shape)
-    #     for j in range(10):
-    #         if shape.name == 'area'+str(j):
-    for color in colors:
-        print('Color:')
-        print(color)
-        for shape in shapes:
-            if shape['name'] == 'area'+str(color):
-                shape['fillcolor'] = colours[color][0]
+#     # for shape in shapes:
+#     #     print(shape)
+#     #     for j in range(10):
+#     #         if shape.name == 'area'+str(j):
+#     for color in colors:
+        
+#         for shape in shapes:
+#             if shape['name'] == 'area'+str(color):
+#                 shape['fillcolor'] = colours[color][0]
 
-    # x0 = 0
-    # for i in range(1, len(data['labels'])):
+#     # x0 = 0
+#     # for i in range(1, len(data['labels'])):
 
-    #     if data['labels'][i] != data['labels'][i-1]:
+#     #     if data['labels'][i] != data['labels'][i-1]:
 
-    #         x1 = i
+#     #         x1 = i
 
-    #         shapes.append({
-    #             'type': 'rect',
-    #             'x0': x0,
-    #             'x1': x1,
-    #             'y0': 0,
-    #             'y1': 0.05,
-    #             # 'fillcolor': colours[labels[x0]][0],
-    #             # 'fillcolor': colors[data['labels'][x0]],
-    #             'fillcolor': [colours[val][0] for val in data['labels']],
-    #             'yref': 'paper',
-    #             'name': 'misc'})
+#     #         shapes.append({
+#     #             'type': 'rect',
+#     #             'x0': x0,
+#     #             'x1': x1,
+#     #             'y0': 0,
+#     #             'y1': 0.05,
+#     #             # 'fillcolor': colours[labels[x0]][0],
+#     #             # 'fillcolor': colors[data['labels'][x0]],
+#     #             'fillcolor': [colours[val][0] for val in data['labels']],
+#     #             'yref': 'paper',
+#     #             'name': 'misc'})
 
-    #         x0 = i
+#     #         x0 = i
 
-    layout = go.Layout(legend={'x': 0, 'y': 1.2}, xaxis=dict(range=[0, 20000]), dragmode='pan', yaxis=dict(fixedrange=True, title='Sensor Value', color='blue'), yaxis2=dict(
-        fixedrange=True, overlaying='y', color='orange', side='right'), yaxis3=dict(fixedrange=True, overlaying='y', color='green', side='left', position=0.001,), yaxis4=dict(fixedrange=True, overlaying='y', color='red', side='right'), shapes=shapes)
+#     layout = go.Layout(legend={'x': 0, 'y': 1.2}, xaxis=dict(range=[0, 20000]), dragmode='pan', yaxis=dict(fixedrange=True, title='Sensor Value', color='blue'), yaxis2=dict(
+#         fixedrange=True, overlaying='y', color='orange', side='right'), yaxis3=dict(fixedrange=True, overlaying='y', color='green', side='left', position=0.001,), yaxis4=dict(fixedrange=True, overlaying='y', color='red', side='right'), shapes=shapes)
 
-    figure = {'data': figure['data'], 'layout': layout}
+#     figure = {'data': figure['data'], 'layout': layout}
 
-    return figure
+#     return figure
 
 
 @app.callback(
