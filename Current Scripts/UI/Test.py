@@ -1,34 +1,62 @@
 import dash
-import dash_bootstrap_components as dbc
-from dash import dcc, html
-from dash.dependencies import Input, Output, State
+from dash import dcc, html, Input, Output
+import pandas as pd
 
-app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
+# Initialize the Dash app
+app = dash.Dash(__name__)
 
+# Define the layout of the app
 app.layout = html.Div([
-    html.Button("Open Modal", id="open-modal-button"),
-    
-    dbc.Modal(
-        [
-            dbc.ModalHeader("Example Modal Header"),
-            dbc.ModalBody("This is the content of the modal"),
-            dbc.ModalFooter(
-                dbc.Button("Close", id="close-modal-button", className="ml-auto")
-            ),
-        ],
-        id="example-modal",
+    dcc.Upload(
+        id='upload-data',
+        children=html.Div([
+            'Drag and Drop or ',
+            html.A('Select Files')
+        ]),
+        style={
+            'width': '100%',
+            'height': '60px',
+            'lineHeight': '60px',
+            'borderWidth': '1px',
+            'borderStyle': 'dashed',
+            'borderRadius': '5px',
+            'textAlign': 'center',
+            'margin': '10px'
+        },
+        # Allow multiple files to be uploaded
+        multiple=True
     ),
+    html.Div(id='output-data-upload')
 ])
 
-@app.callback(
-    Output("example-modal", "is_open"),
-    [Input("open-modal-button", "n_clicks"), Input("close-modal-button", "n_clicks")],
-    [State("example-modal", "is_open")],
-)
-def toggle_modal(n1, n2, is_open):
-    if n1 or n2:
-        return not is_open
-    return is_open
+# Define callback to parse the contents of the uploaded CSV file
+@app.callback(Output('output-data-upload', 'children'),
+              [Input('upload-data', 'contents')],
+              [dash.dependencies.State('upload-data', 'filename')])
+def update_output(contents, filenames):
+    if contents is not None:
+        # Parse the CSV file
+        df = parse_contents(contents, filenames)
+        # Display the CSV content as a DataTable
+        return html.Div([
+            html.H5(f'Uploaded File: {filenames}'),
+            html.Hr(),
+            html.Div([
+                dcc.DataTable(
+                    data=df.to_dict('rows'),
+                    columns=[{'name': i, 'id': i} for i in df.columns],
+                    style_table={'overflowX': 'scroll'},
+                )
+            ])
+        ])
 
+def parse_contents(contents, filenames):
+    content_type, content_string = contents[0].split(',')
+    decoded = base64.b64decode(content_string)
+    # Assume that the user uploaded a CSV file
+    df = pd.read_csv(io.StringIO(decoded.decode('utf-8')))
+    return df
+
+# Run the app
 if __name__ == '__main__':
     app.run_server(debug=True)
