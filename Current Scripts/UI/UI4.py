@@ -26,7 +26,8 @@ app = dash.Dash(__name__)
 data = pd.read_csv("Data/UpdatedData.csv")
 data = data.drop(data.columns[[1, 2, 3]], axis=1)  # Remove extra columns
 data = data.rename(columns={'Unnamed: 0': 'Time'})  # Rename First Column
-data['labels'] = [-1]*data.shape[0]
+data['labels'] = [0]*data.shape[0]
+data['clusterLabels'] = [0]*data.shape[0]
 
 # GLOBAL VARIABLES
 shapes = []  # An array which stores rectangles, to visualise labels
@@ -38,7 +39,7 @@ currentPoint = 0  # The current point, for navigation
 x_0 = 0
 x_1 = 5000
 
-colours = [['green'], ['red'], ['orange'], ['yellow'], ['pink'],
+colours = [['grey'], ['green'], ['red'], ['orange'], ['yellow'], ['pink'],
            ['purple'], ['lavender'], ['blue'], ['brown'], ['cyan']]
 
 # t is used to switch between time based view and 3D based view
@@ -338,7 +339,8 @@ def update_output(contents):
         content_type, content_string = contents.split(',')
         decoded = io.StringIO(base64.b64decode(content_string).decode('utf-8'))
         data = pd.read_csv(decoded)
-        data['labels'] = data['labels'] = [-1]*data.shape[0]
+        data['labels'] = data['labels'] = [0]*data.shape[0]
+        data['clusterLabels'] = [0]*data.shape[0]
         print(data)
 
         print(data.shape)
@@ -536,7 +538,7 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
         if (removeLabelClick == 1 and shapes != []):
 
             shapes.clear()
-            data['labels'][0:len(data['labels'])] = [-1] * \
+            data['labels'][0:len(data['labels'])] = [0] * \
                 (len(data['labels']))
 
         if (undoLabelClick == 1 and shapes != []):
@@ -545,15 +547,15 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
 
         global currentPoint
         if (faultFinder == 'Unlabelled Data Point'):
-            target = -1
-        elif (faultFinder == 'No Fault'):
             target = 0
-        elif (faultFinder == 'Fault 1'):
+        elif (faultFinder == 'No Fault'):
             target = 1
-        elif (faultFinder == 'Fault 2'):
+        elif (faultFinder == 'Fault 1'):
             target = 2
-        elif (faultFinder == 'Fault 3'):
+        elif (faultFinder == 'Fault 2'):
             target = 3
+        elif (faultFinder == 'Fault 3'):
+            target = 4
 
         if (findNextClicked == 1):
 
@@ -691,7 +693,8 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
                             alert = True
                             alertMessage = 'Select a value between 1 and 10 for K.'
                         else:
-                            data['labels'] = performKMeans(df, K)
+                            data['labels'] = [0]*data.shape[0]
+                            data['clusterLabels'] = performKMeans(df, K)
 
                 elif (clusterMethod == 'DBSCAN'):
                     # left in for wrong input
@@ -699,8 +702,9 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
                         alert = True
                         alertMessage = 'Wrong value input for K Means. Clustering has failed.'
                     else:
+                        data['labels'] = [0]*data.shape[0]
                         n = len(sensorChecklist)
-                        data['labels'] = performDBSCAN(df, n)
+                        data['clusterLabels'] = performDBSCAN(df, n)
 
                 shapes = []
                 x0 = 0
@@ -716,7 +720,7 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
                     # labels = [0, 0, 0, 1, 1, 1, 2, 3, 4]
                     for i in range(1, len(data['labels'])):
 
-                        if data['labels'][i] != data['labels'][i-1]:
+                        if data['clusterLabels'][i] != data['clusterLabels'][i-1]:
 
                             x1 = i
 
@@ -727,9 +731,9 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
                                 'y0': 0,
                                 'y1': 0.05,
                                 # 'fillcolor': colours[labels[x0]][0],
-                                'fillcolor': 'white',
+                                'fillcolor': colours[0][0],
                                 'yref': 'paper',
-                                'name': 'area'+str(data['labels'][x0])
+                                'name': 'area'+str(data['clusterLabels'][x0])
                             },)
 
                             x0 = i
@@ -741,9 +745,9 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
                                 'y0': 0,
                                 'y1': 0.05,
                                 # 'fillcolor': colours[labels[x0]][0],
-                                'fillcolor': 'white',
+                                'fillcolor': colours[0][0],
                                 'yref': 'paper',
-                                'name': 'area'+str(data['labels'][x0])
+                                'name': 'area'+str(data['clusterLabels'][x0])
                     },)
                     x_0 = 0
                     x_1 = data.shape[0]
@@ -848,7 +852,8 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
                             alert = True
                             alertMessage = 'Select a value between 1 and 10 for K.'
                         else:
-                            data['labels'] = performKMeans(df, K)
+                            data['labels'] = [0]*data.shape[0]
+                            data['clusterLabels'] = performKMeans(df, K)
 
                 elif (clusterMethod == 'DBSCAN'):
                     # left in for wrong input
@@ -857,7 +862,8 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
                         alertMessage = 'Wrong value input for K Means. Clustering has failed.'
                     else:
                         n = len(sensorChecklist)
-                        data['labels'] = performDBSCAN(df, n)
+                        data['labels'] = [0]*data.shape[0]
+                        data['clusterLabels'] = performDBSCAN(df, n)
 
                 shapes = []
                 x0 = 0
@@ -873,7 +879,7 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
                     # labels = [0, 0, 0, 1, 1, 1, 2, 3, 4]
                     for i in range(1, len(data['labels'])):
 
-                        if data['labels'][i] != data['labels'][i-1]:
+                        if data['clusterLabels'][i] != data['clusterLabels'][i-1]:
 
                             x1 = i
 
@@ -884,9 +890,9 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
                                 'y0': 0,
                                 'y1': 0.05,
                                 # 'fillcolor': colours[labels[x0]][0],
-                                'fillcolor': 'white',
+                                'fillcolor': colours[0][0],
                                 'yref': 'paper',
-                                'name': 'area'+str(data['labels'][x0])
+                                'name': 'area'+str(data['clusterLabels'][x0])
                             },)
 
                             x0 = i
@@ -898,9 +904,9 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
                                 'y0': 0,
                                 'y1': 0.05,
                                 # 'fillcolor': colours[labels[x0]][0],
-                                'fillcolor': 'white',
+                                'fillcolor': colours[0][0],
                                 'yref': 'paper',
-                                'name': 'area'+str(data['labels'][x0])
+                                'name': 'area'+str(data['clusterLabels'][x0])
                     },)
                     x_0 = 0
                     x_1 = data.shape[0]
@@ -914,7 +920,7 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
             # 'color': 'red'
             # Set color based on 'labels' column
             # 'color': [colours[val][0] for val in data['labels']],
-            'color': 'grey'
+            'color': colours[0][0],
         },)]
 
         layout = go.Layout()
@@ -947,7 +953,7 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
         sensorDropdownStyle = {'display': 'none'}
 
     labels = data['labels'].values.tolist()
-    n = labels.count(-1)
+    n = labels.count(0)
     stat1 = 'Data points unlabelled: ' + str(n)
     n = len(set(labels))
     stat2 = 'No. Types Labels Placed: ', int(len(set(labels))-1)
@@ -962,7 +968,7 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
 )
 def autoLabelOptions(startAutoLabelClicks):
     dropdowns = [dcc.Markdown('Cluster Colouring:')]
-    for i in range(len(set(data['labels']))):
+    for i in range(len(set(data['clusterLabels']))):
 
         dropdowns.append(
             dcc.Markdown('Area ' + str(i+1))
@@ -972,14 +978,14 @@ def autoLabelOptions(startAutoLabelClicks):
                 style={'display': 'block', 'width': 200},
                 id=f'dropdown-{i}',
                 options=[
-                    {'label': 'No Fault (green)', 'value': 0},
-                    {'label': 'Fault 1 (Red)', 'value': 1},
-                    {'label': 'Fault 2 (orange)', 'value': 2},
-                    {'label': 'Fault 3 (yellow)', 'value': 3}]
+                    {'label': 'No Fault (green)', 'value': 1},
+                    {'label': 'Fault 1 (Red)', 'value': 2},
+                    {'label': 'Fault 2 (orange)', 'value': 3},
+                    {'label': 'Fault 3 (yellow)', 'value': 4}]
             )
         )
 
-    for i in range(len(set(data['labels'])), 11):
+    for i in range(len(set(data['clusterLabels'])), 11):
         dropdowns.append(
             dcc.Markdown('Area ' + str(i+1), style={'display': 'none'},)
         )
@@ -1010,41 +1016,71 @@ def autoLabelOptions(startAutoLabelClicks):
     Input('dropdown-9', 'value'),
     State(mainGraph, 'figure'),
     State(mainGraph, 'relayoutData'),
+    State('switchView', 'n_clicks'),
     prevent_initial_call=True,
 
 )
-def colorLabels(area0, area1, area2, area3, area4, area5, area6, area7, area8, area9, figure, relayoutData):
+def colorLabels(area0, area1, area2, area3, area4, area5, area6, area7, area8, area9, figure, relayoutData, switchView):
 
     global x_0
     global x_1
 
+    if (switchView is None):
+        switchView = 0
+
     labels = [area0, area1, area2, area3, area4,
               area5, area6, area7, area8, area9]
+    print('got hereeee')
+    if (switchView % 3 == 0):
+        for shape in shapes:
+            for label in range(len(labels)):
+                if shape['name'] == 'area'+str(label) and labels[label] is not None:
+                    shape['fillcolor'] = colours[labels[label]][0]
+                    data['labels'] = [0]*data.shape[0]
+                    # shape['name'] = labels[label]
+                    data['labels'][shape['x0']:shape['x1']] = [
+                        labels[label]] * (shape['x1']-shape['x0'])
 
-    for shape in shapes:
-        for label in range(len(labels)):
-            if shape['name'] == 'area'+str(label) and labels[label] is not None:
-                shape['fillcolor'] = colours[labels[label]][0]
-                shape['name'] = labels[label]
+        if relayoutData and 'xaxis.range[0]' in relayoutData.keys():
+            x_0 = relayoutData.get('xaxis.range[0]')
+            x_1 = relayoutData.get('xaxis.range[1]')
 
-    # for shape in shapes:
-    #     for newLabel in labels:
-    #         if shape['name'] == 'area'+str(newLabel):
-    #             shape['fillcolor'] = colours[newLabel][0]
+        if 'shapes' in figure['layout']:
+            figure['layout']['shapes'] = shapes
 
-    if relayoutData and 'xaxis.range[0]' in relayoutData.keys():
-        x_0 = relayoutData.get('xaxis.range[0]')
-        x_1 = relayoutData.get('xaxis.range[1]')
+        return figure
 
-    # layout = go.Layout(legend={'x': 0, 'y': 1.2}, xaxis=dict(range=[x_0, x_1]), dragmode='pan', yaxis=dict(fixedrange=True, title='Sensor Value', color='blue'), yaxis2=dict(
-    #     fixedrange=True, overlaying='y', color='orange', side='right'), yaxis3=dict(fixedrange=True, overlaying='y', color='green', side='left', position=0.001,), yaxis4=dict(fixedrange=True, overlaying='y', color='red', side='right'), shapes=shapes)
+    # elif (switchView % 3 == 2):
 
-    if 'shapes' in figure['layout']:
-        figure['layout']['shapes'] = shapes
+    #     for i in range(len(data['clusterLabels'])):
 
-    # figure = {'data': figure['data'], 'layout': layout}
+    #         for label in range(len(labels)):
 
-    return figure
+    #             if data['clusterLabels'][i] == label:
+
+    #                 if labels[label] is not None:
+    #                     data['labels'] = labels[label]
+    #             # if data['clusterLabels'][i] == labels[label]:
+    #             #     data['labels'] = labels[label]
+
+    #     selectData = [go.Scatter3d(y=data.loc[:, yAxis_dropdown_3D], z=data.loc[:,
+    #                                                                             zAxis_dropdown_3D], x=data.loc[:, xAxis_dropdown_3D], mode='markers',
+    #                                marker={
+    #         'size': 10,
+    #         'opacity': 1,
+    #         # 'color': 'red'
+    #         # Set color based on 'labels' column
+    #         # 'color': [colours[val][0] for val in data['labels']],
+    #         'color':  [colours[val][0] for val in data['labels']],
+    #     },)]
+
+    #     layout = go.Layout()
+
+    #     fig = {'data': selectData, 'layout': layout}
+
+    #     return fig
+    else:
+        raise PreventUpdate
 
 
 @app.callback(
