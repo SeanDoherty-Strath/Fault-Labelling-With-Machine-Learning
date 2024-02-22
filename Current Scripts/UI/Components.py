@@ -102,10 +102,16 @@ faultFinder = dcc.Dropdown(value='Unlabelled Data Point', options=[
 
 # Box 4
 labelDropdown = dcc.Dropdown(value=0, options=[
-    {'label': 'No Fault (green)', 'value': 1},
+    {'label': 'No Fault (Green)', 'value': 1},
     {'label': 'Fault 1 (Red)', 'value': 2},
-    {'label': 'Fault 2 (orange)', 'value': 3},
-    {'label': 'Fault 2 (yellow)', 'value': 4}])
+    {'label': 'Fault 2 (Orange)', 'value': 3},
+    {'label': 'Fault 3 (Yellow)', 'value': 4},
+    {'label': 'Fault 4 (Pink)', 'value': 5},
+    {'label': 'Fault 5 (Purple)', 'value': 6},
+    {'label': 'Fault 6 (Lavender)', 'value': 7},
+    {'label': 'Fault 7 (Blue)', 'value': 8},
+    {'label': 'Fault 8 (Brown)', 'value': 9},
+    {'label': 'Fault 9 (Cyan)', 'value': 10}])
 
 
 # Multi-Graph View
