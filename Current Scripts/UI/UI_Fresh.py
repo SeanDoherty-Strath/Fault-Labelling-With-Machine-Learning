@@ -18,7 +18,7 @@ import base64  # Import base64 module
 # Internal Components and Functions
 from Components import mainGraph, xAxis_dropdown_3D, yAxis_dropdown_3D, zAxis_dropdown_3D, faultFinder, alert
 from Components import title, sensorDropdown, sensorHeader, labelDropdown, stat3, faultFinderHeader, faultFinderText, stat1, stat2, exportName, exportConfirm, AI_header, clusterMethod, reductionMethod
-from myFunctions import performKMeans, performPCA, performDBSCAN, performAutoEncoding
+from myFunctions import performKMeans, performPCA, performDBSCAN, performAutoEncoding, findBestParams, knee_point
 
 app = dash.Dash(__name__)
 
@@ -43,18 +43,44 @@ x_1 = 5000
 colours = [['grey'], ['green'], ['red'], ['orange'], ['yellow'], ['pink'],
            ['purple'], ['lavender'], ['blue'], ['brown'], ['cyan']]
 
+
 # t is used to switch between time based view and 3D based view
 t = None
 
 # Define the layout
 app.layout = html.Div(style={'background': 'linear-gradient(to bottom, blue, #000000)', 'height': '100vh', 'display': 'flex', 'justify-content': 'center', 'flex-direction': 'column', 'align-items': 'center'}, children=[
-    alert,
-    html.Div(style={'height': '5%', 'width': '90%'},
-             children=[title]),
+
+    html.Div(
+        id='alert2div',
+        style={
+            'display': 'none',
+
+            'backgroundColor': 'white',
+            'border': '5px solid black',
+            'border-radius': 15,
+            'margin': 20,
+            'align-items': 'center',
+
+            'width': '90%',
+            'height': 50,
+            'flex-direction': 'row',
+        },
+        children=[
+            dcc.Markdown('Warning: ', style={
+                         'fontSize': 24, 'fontWeight': 'bold', 'padding': 10}),
+            dcc.Markdown('Message', id='alert2', style={'fontSize': 24})
+        ]
+    ),
+    # html.Div(style={'height': '5%', 'width': '90%'},
+    #          children=[title,
+    #                    ]),
 
     # Top Box
     html.Div(style={'overflow': 'scroll', 'width': '90%', 'height': '55%', 'margin': '20px', 'border-radius': '10px', 'padding': '20px', 'background-color': 'white'},
              children=[
+
+
+
         # dcc.Markdown(id='latestAction', children='Latest Action: '),
         html.Button('Switch View', id='switchView'),
 
@@ -89,6 +115,8 @@ app.layout = html.Div(style={'background': 'linear-gradient(to bottom, blue, #00
             ]
             ),
             mainGraph,
+            # alert,
+
 
             html.Div(id='ClusterDropdownContainer', style={"display": "none"}, children=[
                 dcc.Markdown("Show Clusters", style={
@@ -118,24 +146,25 @@ app.layout = html.Div(style={'background': 'linear-gradient(to bottom, blue, #00
 
         html.Div(style={'width': '24%', 'height': '100%', }, children=[
             #  Box 2
-            html.Div(style={'overflow': 'scroll', 'border-radius': '10px', 'width': '100%', 'height': '47%', 'background-color': 'white'},
+            html.Div(style={'border-radius': '10px', 'width': '100%', 'height': '47%', 'background-color': 'white', },
                      children=[
                 # zoom,
                 # pan
                 dcc.Markdown('Labeller', style={
                              'fontSize': 26, 'fontWeight': 'bold', 'textAlign': 'center', }),
 
+                labelDropdown,
                 html.Button(children='Start Label', id='labelButton', style={
                     'width': '100%', 'height': 40, 'fontSize': 16}),
-                labelDropdown,
-                html.Button('Remove Label', id='removeLabels', style={
-                    'width': '50%'}),
-                html.Button('Undo Label', id='undoLabel', style={
-                    'width': '50%'}),
-                html.Button('Change Label', id='changeLabel', style={
-                    'width': '50%'}),
-                html.Button('Move Label', id='moveLabel', style={
-                    'width': '50%'}),
+
+                html.Button('Remove Labels', id='removeLabels', style={'height': 40,
+                                                                       'width': '100%'}),
+                # html.Button('Undo Label', id='undoLabel', style={
+                #     'width': '50%'}),
+                # html.Button('Change Label', id='changeLabel', style={
+                #     'width': '50%'}),
+                # html.Button('Move Label', id='moveLabel', style={
+                #     'width': '50%'}),
             ]),
 
             html.Div(
@@ -165,47 +194,6 @@ app.layout = html.Div(style={'background': 'linear-gradient(to bottom, blue, #00
         html.Div(style={'overflow': 'scroll',  'border-radius': '10px', 'width': '24%', 'height': '100%', 'background-color': 'white'},
                  children=[
             AI_header,
-            dcc.Markdown('Algorithms: ', style={
-                'fontSize': 22, 'fontWeight': 'bold', 'margin-left': 10, }),
-            html.Div(style={'display': 'flex', }, children=[
-                dcc.Markdown(
-                    'Clustering Method:', style={'margin-left': 10, 'width': '50%'}),
-                clusterMethod,
-            ]),
-            html.Div(style={'display': 'flex', }, children=[
-                dcc.Markdown(
-                    'Reduction Method:', style={'margin-left': 10, 'width': '50%'}),
-                reductionMethod
-            ]),
-
-
-            dcc.Markdown('Parameters: ', style={
-                'fontSize': 22, 'fontWeight': 'bold', 'margin-left': 10, }),
-            html.Div(style={'display': 'flex', }, children=[
-                dcc.Markdown('No. Clusters (K)', id='kMeansMarkdown',  style={
-                             'margin-left': 10, 'width': '50%'}),
-                dcc.Input(type='number', id='K', style={
-                    'align-self': 'center', 'width': '100%', 'height': '90%', 'fontSize': 20})
-            ]),
-            html.Div(style={'display': 'flex', }, children=[
-                dcc.Markdown('Reduced Size:', id='reducedSizeMarkdown', style={
-                             'margin-left': 10, 'width': '50%'}),
-                dcc.Input(type='number', id='reducedSize', style={
-                    'align-self': 'center', 'width': '100%', 'height': '90%', 'fontSize': 20})
-            ]),
-            html.Div(style={'display': 'flex', }, children=[
-                dcc.Markdown('Epsilon:', id='epsilon', style={
-                             'margin-left': 10, 'width': '50%'}),
-                html.Div(style={'width': '100%'}, children=[
-                    dcc.Slider(id='eps-slider', min=1, max=50,  marks={i: str(i) for i in range(1, 50, 5)}, step=1, value=32)]),
-            ]),
-            html.Div(style={'display': 'flex', }, children=[
-                dcc.Markdown('Min Value:', id='minVal', style={
-                             'margin-left': 10, 'width': '50%'}),
-                html.Div(style={'width': '100%'}, children=[
-                    dcc.Slider(id='minVal-slider', min=1, max=50,  marks={i: str(i) for i in range(1, 20, 2)}, step=1, value=9)]),
-            ]),
-
 
             dcc.Markdown('Sensors: ', style={
                 'fontSize': 22, 'fontWeight': 'bold', 'margin-left': 10, }),
@@ -215,11 +203,61 @@ app.layout = html.Div(style={'background': 'linear-gradient(to bottom, blue, #00
                     "Select all", id='select-all'),
                 html.Button(
                     "Deselect all", id='deselect-all'),
+                html.Button(
+                    "Select Sensors in Graph", id='graphSensors'),
             ]),
             html.Div(style={'width': '100%', 'height': 150, 'overflow': 'scroll'}, children=[
                 dcc.Checklist(
                     id='sensor-checklist', options=data.columns[1:53], inline=True, labelStyle={'width': '33%'})
             ]),
+
+            dcc.Markdown('Feature Reduction: ', style={
+                'fontSize': 22, 'fontWeight': 'bold', 'margin-left': 10, }),
+            html.Div(style={'display': 'flex', }, children=[
+                dcc.Markdown(
+                    'Reduction Method:', style={'margin-left': 10, 'width': '50%'}),
+                reductionMethod
+            ]),
+            html.Div(style={'display': 'flex', }, children=[
+                dcc.Markdown('Reduced Size:', id='reducedSizeMarkdown', style={
+                             'margin-left': 10, 'width': '50%'}),
+                dcc.Input(type='number', id='reducedSize', style={
+                    'align-self': 'center', 'width': '100%', 'height': '90%', 'fontSize': 20})
+            ]),
+
+
+            dcc.Markdown('Clustering: ', style={
+                'fontSize': 22, 'fontWeight': 'bold', 'margin-left': 10, }),
+            html.Div(style={'display': 'flex', }, children=[
+                dcc.Markdown(
+                    'Clustering Method:', style={'margin-left': 10, 'width': '50%'}),
+                clusterMethod,
+            ]),
+
+
+
+            html.Div(style={'display': 'flex', }, children=[
+                dcc.Markdown('No. Clusters (K)', id='kMeansMarkdown',  style={
+                             'margin-left': 10, 'width': '50%'}),
+                dcc.Input(type='number', id='K', value=3, style={
+                    'align-self': 'center', 'width': '100%', 'height': '90%', 'fontSize': 20})
+            ]),
+
+            html.Div(id='epsilon', style={'display': 'flex'}, children=[
+                dcc.Markdown('Epsilon:',  style={
+                             'margin-left': 10, 'width': '50%'}),
+                html.Div(style={'width': '100%'}, children=[
+                    dcc.Slider(id='eps-slider', min=1, max=60,  marks={i: str(i) for i in range(0, 60, 5)}, step=1, value=32)]),
+            ]),
+            html.Div(id='minVal', style={'display': 'flex', }, children=[
+                dcc.Markdown('Min Value:', style={
+                             'margin-left': 10, 'width': '50%'}),
+                html.Div(style={'width': '100%'}, children=[
+                    dcc.Slider(id='minVal-slider', min=1, max=60,  marks={i: str(i) for i in range(0, 60, 5)}, step=1, value=9)]),
+            ]),
+
+
+
 
 
             html.Button(children='Start Now', id='startAutoLabel', style={
@@ -378,15 +416,17 @@ def update_output(contents):
     Output('labelButton', 'children'),
 
     Output('removeLabels', 'n_clicks'),
-    Output('undoLabel', 'n_clicks'),
+    # Output('undoLabel', 'n_clicks'),
     Output('findPrev', 'n_clicks'),
     Output('findNext', 'n_clicks'),
 
     Output(stat1, 'children'),
     Output(stat2, 'children'),
     Output(stat3, 'children'),
-    Output(alert, 'is_open'),
-    Output(alert, 'children'),
+    # Output(alert, 'is_open'),
+    # Output(alert, 'children'),
+    Output('alert2div', 'style', allow_duplicate=True),
+    Output('alert2', 'children', allow_duplicate=True),
 
     Output(sensorDropdown, 'style'),
     Output('startAutoLabel', 'n_clicks'),
@@ -394,15 +434,16 @@ def update_output(contents):
     Output('clusterDropdown', 'value'),
     Output('ClusterDropdownContainer', 'style'),
     Output('ClusterColourContainer', 'style'),
-
-
+    Output(xAxis_dropdown_3D, 'style'),
+    Output(yAxis_dropdown_3D, 'style'),
+    Output(zAxis_dropdown_3D, 'style'),
     Input(sensorDropdown, 'value'),
     State(labelDropdown, 'value'),
     Input('switchView', 'n_clicks'),
     Input('labelButton', 'n_clicks'),
 
     Input('removeLabels', 'n_clicks'),
-    Input('undoLabel', 'n_clicks'),
+    # Input('undoLabel', 'n_clicks'),
     Input('findPrev', 'n_clicks'),
     Input('findNext', 'n_clicks'),
     Input(faultFinder, 'value'),
@@ -426,10 +467,12 @@ def update_output(contents):
     State('reducedSize', 'value'),
     State('eps-slider', 'value'),
     State('minVal-slider', 'value'),
-
+    State('alert2div', 'style'),
+    State('alert2', 'children'),
+    prevent_initial_call=True,
 
 )
-def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButtonClicks, removeLabelClick, undoLabelClick, findPrevClicked, findNextClicked, faultFinder, clickData, xAxis_dropdown_3D, yAxis_dropdown_3D, zAxis_dropdown_3D, newAutoLabel, clusterDropdownOptions, clusterDropdownValue, colorNow, sensorChecklist, clusterMethod, reductionMethod, relayoutData, K, reducedSize, eps, minVal):
+def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButtonClicks, removeLabelClick, findPrevClicked, findNextClicked, faultFinder, clickData, xAxis_dropdown_3D, yAxis_dropdown_3D, zAxis_dropdown_3D, newAutoLabel, clusterDropdownOptions, clusterDropdownValue, colorNow, sensorChecklist, clusterMethod, reductionMethod, relayoutData, K, reducedSize, eps, minVal, alert2div, alert2):
 
     global shapes
     global colours
@@ -449,13 +492,21 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
     if (labelButtonClicks == None):
         labelButtonClicks = 0
 
+    if (removeLabelClick == None):
+        removeLabelClick = 0
+
     # Set default output values
     labelButtonTitle = 'New Label'
-    alert = False
-    alertMessage = ''
+
     ClusterColourContainer = {"display": "none"}
 
     ClusterDropdownContainer = {"display": "none"}
+    xAxis_dropdown_3D_style = {"display": "none"}
+    yAxis_dropdown_3D_style = {"display": "none"}
+    zAxis_dropdown_3D_style = {"display": "none"}
+
+    if (removeLabelClick == 1):
+        data.loc[:, 'labels'] = 0
 
     # Take note of initial x0 and x1 values
     if relayoutData and 'xaxis.range[0]' in relayoutData.keys():
@@ -541,16 +592,6 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
             dragMode = 'select'
             labelButtonTitle = "Confirm Label"
 
-        # if (removeLabelClick == 1 and shapes != []):
-
-        #     shapes.clear()
-        #     data['labels'][0:len(data['labels'])] = [0] * \
-        #         (len(data['labels']))
-
-        # if (undoLabelClick == 1 and shapes != []):
-        #     shapes.pop()
-        #     shapes.pop()
-
         if (findNextClicked == 1):
 
             if (faultFinder == 'Unlabelled Data Point'):
@@ -571,8 +612,9 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
 
             if (int(currentPoint) == len(data['labels'])):
                 # Create an alert to informt that there are no furher ponts
-                alert = True
-                alertMessage = 'You have reached the end of the data'
+
+                alert2div['display'] = 'flex'
+                alert2 = 'You have reached the end of the data.'
             else:
                 start = -1
                 end = -1
@@ -590,8 +632,9 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
                         break
                 if (start == -1):
                     # There is no exisiting label
-                    alert = True
-                    alertMessage = "No label exists"
+
+                    alert2div['display'] = 'flex'
+                    alert2 = 'No label exists.'
                     x_0 = 0
                     x_1 = data.shape[0]
                 else:
@@ -621,8 +664,9 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
 
             if (int(currentPoint) == 0):
                 # Create an alert to informt that there are no furher ponts
-                alert = True
-                alertMessage = 'You have reached the start of the data'
+                alert2div['display'] = 'flex'
+                alert2 = 'You have reached the start of the data'
+
             else:
                 start = -1
                 end = -1
@@ -642,8 +686,9 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
                         break
                 if (end == -1):
                     # There is no exisiting label
-                    alert = True
-                    alertMessage = "No label exists"
+
+                    alert2div['display'] = 'flex'
+                    alert2 = 'No label exists'
                     x_0 = 0
                     x_1 = data.shape[0]
                 else:
@@ -666,8 +711,9 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
         if (newAutoLabel == 1):
 
             if (sensorChecklist == []):
-                alert = True
-                alertMessage = 'Select sensors for auto-detection.'
+
+                alert2div['display'] = 'flex'
+                alert2 = 'Select sensors for auto-detection.'
 
             else:
 
@@ -676,8 +722,10 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
                 if (reductionMethod == 'PCA'):
 
                     if (reducedSize == None or reducedSize < 2):
-                        alert = True
-                        alertMessage = 'Wrong value input for PCA. Data reduction has failed.'
+
+                        alert2div['display'] = 'flex'
+                        alert2 = 'Wrong value input for PCA. Data reduction has failed.'
+
                     else:
                         df = performPCA(df, reducedSize)
                 elif (reductionMethod == 'Auto-encoding'):
@@ -686,12 +734,15 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
 
                 if (clusterMethod == 'K Means'):
                     if (K == None or K < 0):
-                        alert = True
-                        alertMessage = 'Wrong value input for K Means. Clustering has failed.'
+
+                        alert2div['display'] = 'flex'
+                        alert2 = 'Wrong value input for K Means. Clustering has failed.'
+
                     else:
                         if (K > 10 or K <= 1):
-                            alert = True
-                            alertMessage = 'Select a value between 1 and 10 for K.'
+
+                            alert2div['display'] = 'flex'
+                            alert2 = 'Select a value between 1 and 10 for K.'
                         else:
                             data['labels'] = [0]*data.shape[0]
                             data['clusterLabels'] = performKMeans(df, K)
@@ -699,12 +750,17 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
                 elif (clusterMethod == 'DBSCAN'):
                     # left in for wrong input
                     if (False):
-                        alert = True
-                        alertMessage = 'Wrong value input for K Means. Clustering has failed.'
+
+                        alert2div['display'] = 'flex'
+                        alert2 = 'Select a value between 1 and 10 for K.'
+
                     else:
-                        data['labels'] = [0]*data.shape[0]
+                        # data['labels'] = [0]*data.shape[0]
+                        # n = len(sensorChecklist)
+                        # data['clusterLabels'] = performDBSCAN(df, n)
                         n = len(sensorChecklist)
-                        data['clusterLabels'] = performDBSCAN(df, n)
+                        data['labels'] = [0]*data.shape[0]
+                        data['clusterLabels'] = performDBSCAN(df, eps, minVal)
 
                 clusterDropdownOptions = list(set(data['clusterLabels']))
                 clusterDropdownValue = clusterDropdownOptions
@@ -734,10 +790,10 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
                     'x0': x0,
                     'x1': x1,
                     'y0': 0,
-                    'y1': 1,
+                    'y1': 0.05,
                     'fillcolor': colours[data['labels'][x0]][0],
                     'yref': 'paper',
-                    'opacity': 0.2,
+                    'opacity': 1,
                     'name': str(data['labels'][x0])
                 },)
 
@@ -748,10 +804,10 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
             'x0': x0,
             'x1': len(data['labels']),
             'y0': 0,
-            'y1': 1,
+            'y1': 0.05,
             'fillcolor': colours[data['labels'][x0]][0],
             'yref': 'paper',
-            'opacity': 0.2,
+            'opacity': 1,
             'name': str(data['labels'][x0])
         },)
 
@@ -800,6 +856,8 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
         sensorDropdownStyle = {'display': 'block'}
 
     if (switchViewButtonClicks % 3 == 1):
+        xAxis_dropdown_3D_style = {"display": "block"}
+        yAxis_dropdown_3D_style = {"display": "block"}
 
         sensorDropdownStyle = {'display': 'none'}
 
@@ -848,6 +906,9 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
 
     if (switchViewButtonClicks % 3 == 2):
         #  3D SCATTER PLOT
+        xAxis_dropdown_3D_style = {"display": "block"}
+        yAxis_dropdown_3D_style = {"display": "block"}
+        zAxis_dropdown_3D_style = {"display": "block"}
 
         ClusterDropdownContainer = {
             "display": "block", 'flex': 0.5}
@@ -855,16 +916,18 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
         if (newAutoLabel == 1):
 
             if (sensorChecklist == []):
-                alert = True
-                alertMessage = 'Select sensors for auto-detection.'
+
+                alert2div['display'] = 'flex'
+                alert2 = 'Select sensors for auto-detection.'
             else:
                 df = data.loc[:, sensorChecklist]
 
                 if (reductionMethod == 'PCA'):
 
                     if (reducedSize == None or reducedSize < 2):
-                        alert = True
-                        alertMessage = 'Wrong value input for PCA. Data reduction has failed.'
+
+                        alert2div['display'] = 'flex'
+                        alert2 = 'Wrong value input for PCA. Data reduction has failed.'
 
                     else:
                         df = performPCA(df, reducedSize)
@@ -874,12 +937,15 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
 
                 if (clusterMethod == 'K Means'):
                     if (K == None or K < 0):
-                        alert = True
-                        alertMessage = 'Wrong value input for K Means. Clustering has failed.'
+
+                        alert2div['display'] = 'flex'
+                        alert2 = 'Wrong value input for K Means. Clustering has failed.'
+
                     else:
                         if (K > 10 or K <= 1):
-                            alert = True
-                            alertMessage = 'Select a value between 1 and 10 for K.'
+
+                            alert2div['display'] = 'flex'
+                            alert2 = 'Select a value between 1 and 10 for K.'
                         else:
                             data['labels'] = [0]*data.shape[0]
                             data['clusterLabels'] = performKMeans(df, K)
@@ -887,12 +953,14 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
                 elif (clusterMethod == 'DBSCAN'):
                     # left in for wrong input
                     if (False):
-                        alert = True
-                        alertMessage = 'Wrong value input for K Means. Clustering has failed.'
+
+                        alert2div['display'] = 'flex'
+                        alert2 = 'Wrong input. Clustering has failed.'
+
                     else:
                         n = len(sensorChecklist)
                         data['labels'] = [0]*data.shape[0]
-                        data['clusterLabels'] = performDBSCAN(df, n)
+                        data['clusterLabels'] = performDBSCAN(df, eps, minVal)
 
                 clusterDropdownOptions = list(set(data['clusterLabels']))
                 clusterDropdownValue = clusterDropdownOptions
@@ -949,6 +1017,7 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
         #     # 'color': [colours[val][0] for val in data['labels']],
         #     'color': colours[0][0],
         # },)]
+
         selectData = [go.Scatter3d(y=data.loc[:, yAxis_dropdown_3D], z=data.loc[:,
                                                                                 zAxis_dropdown_3D], x=data.loc[:, xAxis_dropdown_3D], mode='markers',
                                    marker={
@@ -989,12 +1058,12 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
 
     labels = data['labels'].values.tolist()
     n = labels.count(0)
-    stat1 = 'Data points unlabelled: ' + str(n)
+    stat1 = 'Unlabelle Data: ' + str(n)
+    stat2 = 'Labelled Data: ' + str(len(data['labels']) - n)
     n = len(set(labels))
-    stat2 = 'No. Types Labels Placed: ', int(len(set(labels))-1)
-    stat3 = 'No. Labels Placed: ', len(shapes)
+    stat3 = 'No. Labels Placed: ', int(len(set(labels)))
 
-    return fig, labelButtonTitle, 0, 0, 0, 0, stat1, stat2, stat3, alert, alertMessage, sensorDropdownStyle, 0, clusterDropdownOptions, clusterDropdownValue, ClusterDropdownContainer, ClusterColourContainer
+    return fig, labelButtonTitle, 0, 0, 0, stat1, stat2, stat3, alert2div,  alert2, sensorDropdownStyle, 0, clusterDropdownOptions, clusterDropdownValue, ClusterDropdownContainer, ClusterColourContainer, xAxis_dropdown_3D_style, yAxis_dropdown_3D_style, zAxis_dropdown_3D_style
 
 
 @app.callback(
@@ -1056,6 +1125,8 @@ def autoLabelOptions(startAutoLabelClicks):
     # Output(mainGraph, 'figure', allow_duplicate=True),
     Output('colorNow', 'n_clicks'),
     Output('ClusterColourContainer', 'style', allow_duplicate=True),
+    Output('alert2div', 'style', allow_duplicate=True),
+    Output('alert2', 'children', allow_duplicate=True),
     Input('colorNow', 'n_clicks'),
     State('dropdown-0', 'value'),
     State('dropdown-1', 'value'),
@@ -1080,39 +1151,52 @@ def autoLabelOptions(startAutoLabelClicks):
     State(mainGraph, 'figure'),
     State(mainGraph, 'relayoutData'),
     State('switchView', 'n_clicks'),
+    State('alert2div', 'style'),
     prevent_initial_call=True,
 
 )
-def colorLabels(colorNow, area0, area1, area2, area3, area4, area5, area6, area7, area8, area9, figure, relayoutData, switchView):
+def colorLabels(colorNow, area0, area1, area2, area3, area4, area5, area6, area7, area8, area9, figure, relayoutData, switchView, alert2div):
 
-    global x_0
-    global x_1
+    if colorNow == None or colorNow == 0:
+        raise PreventUpdate
+    else:
 
-    if (switchView is None):
-        switchView = 0
+        print(alert2div['display'])
+        global x_0
+        global x_1
 
-    # if (colorNow is None):
-    #     colorNow = 0
+        alert2div['display'] = 'none'
 
-    areas = [area0, area1, area2, area3, area4,
-             area5, area6, area7, area8, area9]
+        alertMessage = ''
 
-    for i in range(len(set(data['clusterLabels']))):
-        if areas[i] == None:
-            print('Not all dropdowns are full')
-            raise PreventUpdate
+        if (switchView is None):
+            switchView = 0
 
-    for i in range(len(data['labels'])):
-        for j in range(len(areas)):
-            if j == data['clusterLabels'][i]:
-                # if areas[j] == None:
-                #     data.loc[i, 'labels'] = 0
-                # else:
-                data.loc[i, 'labels'] = areas[j]
+        # if (colorNow is None):
+        #     colorNow = 0
 
-    ClusterColourContainer = {'display': 'none'}
+        areas = [area0, area1, area2, area3, area4,
+                 area5, area6, area7, area8, area9]
 
-    return 0, ClusterColourContainer
+        ClusterColourContainer = {'display': 'none'}
+
+        for i in range(len(set(data['clusterLabels']))):
+            if areas[i] == None:
+
+                alert2div['display'] = 'flex'
+                alertMessage = 'Not all dropdowns were full. Labelling may be wrong.'
+
+        for i in range(len(data['labels'])):
+            for j in range(len(areas)):
+                if j == data['clusterLabels'][i]:
+                    if areas[j] == None:
+                        data.loc[i, 'labels'] = 0
+                    else:
+                        data.loc[i, 'labels'] = areas[j]
+
+        ClusterColourContainer = {'display': 'none'}
+
+        return 0, ClusterColourContainer, alert2div, alertMessage
 
     # if (switchView % 3 == 0):
     #     for shape in shapes:
@@ -1235,19 +1319,37 @@ def update_textbox(click_data, switchViewClicks):
     Output('sensor-checklist', 'value', allow_duplicate=True),
     Output('select-all', 'n_clicks'),
     Output('deselect-all', 'n_clicks'),
+    Output('graphSensors', 'n_clicks'),
     Input('select-all', 'n_clicks'),
     Input('deselect-all', 'n_clicks'),
+    Input('graphSensors', 'n_clicks'),
+    State(sensorDropdown, 'value'),
+    State('switchView', 'n_clicks'),
+    State(xAxis_dropdown_3D, 'value'),
+    State(yAxis_dropdown_3D, 'value'),
+    State(zAxis_dropdown_3D, 'value'),
     prevent_initial_call=True
 )
-def selectDeselectAll(selectClicks, deselectClicks):
+def selectDeselectAll(selectClicks, deselectClicks, graphSensors, sensorDropdown, switchView, xAxis_dropdown_3D, yAxis_dropdown_3D, zAxis_dropdown_3D):
     if selectClicks == None:
         selectClicks = 0
     if deselectClicks == None:
         deselectClicks = 0
+    if switchView == None:
+        switchView = 0
     if selectClicks == 1:
         return data.columns[1:], 0, 0
+    elif deselectClicks == 1:
+        return [], 0, 0, 0
+    elif graphSensors == 1:
+        if (switchView % 3 == 0):
+            return sensorDropdown, 0, 0, 0
+        elif (switchView % 3 == 1):
+            return [xAxis_dropdown_3D, yAxis_dropdown_3D], 0, 0, 0
+        elif (switchView % 3 == 2):
+            return [xAxis_dropdown_3D, yAxis_dropdown_3D, zAxis_dropdown_3D], 0, 0, 0
     else:
-        return [], 0, 0
+        raise PreventUpdate
 
 
 @app.callback(
@@ -1255,6 +1357,8 @@ def selectDeselectAll(selectClicks, deselectClicks):
     Output('reducedSize', 'style'),
     Output('reducedSizeMarkdown', 'style'),
     Output('kMeansMarkdown', 'style'),
+    Output('epsilon', 'style'),
+    Output('minVal', 'style'),
 
 
     Input(clusterMethod, 'value'),
@@ -1267,6 +1371,8 @@ def autoLabelStyles(clusterMethod, reductionMethod, switchView):
     kMeansMarkdown = {'display': 'none'}
     reducedStyle_style = {'display': 'none'}
     reducedSizeMarkdown = {'display': 'none'}
+    epsStyle = {'display': 'none'}
+    minValStyle = {'display': 'none'}
 
     if switchView == None:
         switchView = 0
@@ -1277,13 +1383,43 @@ def autoLabelStyles(clusterMethod, reductionMethod, switchView):
         kMeansMarkdown = {'display': 'block',
                           'margin-left': 10, 'width': '50%'}
 
+    if (clusterMethod == 'DBSCAN'):
+        epsStyle = {'display': 'flex'}
+        minValStyle = {'display': 'flex'}
+
     if (reductionMethod == 'PCA'):
         reducedStyle_style = {'display': 'block', 'align-self': 'center',
                               'width': '100%', 'height': '90%', 'fontSize': 20}
         reducedSizeMarkdown = {'display': 'block',
                                'margin-left': 10, 'width': '50%'}
 
-    return K_style, reducedStyle_style, reducedSizeMarkdown, kMeansMarkdown
+    return K_style, reducedStyle_style, reducedSizeMarkdown, kMeansMarkdown, epsStyle, minValStyle
+
+
+@app.callback(
+    Output('minVal-slider', 'value'),
+    Output('eps-slider', 'value'),
+    Input(clusterMethod, 'value'),
+    Input('sensor-checklist', 'value'),
+    Input('reducedSize', 'value'),
+    Input(reductionMethod, 'value')
+
+)
+def autoLabelStyles(clusterMethod, sensorChecklist, reducedSize, reductionMethod):
+    print(sensorChecklist)
+    if clusterMethod == 'DBSCAN' and sensorChecklist != []:
+        df = data.loc[:, sensorChecklist]
+        if reductionMethod == 'PCA':
+            df = performPCA(df, reducedSize)
+        elif reductionMethod == 'Auto-encoding':
+            df = performAutoEncoding(df)
+
+        n = len(df.columns)
+        eps = knee_point(df, n + 1)
+
+        return n+1, eps
+    else:
+        raise PreventUpdate
 
 
 # Run the app

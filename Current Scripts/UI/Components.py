@@ -60,8 +60,8 @@ mainGraph = dcc.Graph(figure=fig, style={'flex': '1'})
 
 alert = dbc.Alert(
     "WARNING: This is not ok",
-    is_open=True,
-    duration=4000,
+    is_open=False,
+    # duration=4000,
     color="lightblue",
     style={
         'font-size': 30,
@@ -77,7 +77,6 @@ alert = dbc.Alert(
 
     }
 )
-
 
 # Box 1
 sensorDropdown = dcc.Checklist(options=data.columns, value=['xmeas_1'], style={
@@ -101,7 +100,8 @@ faultFinder = dcc.Dropdown(value='Unlabelled Data Point', options=[
 
 
 # Box 4
-labelDropdown = dcc.Dropdown(value=0, options=[
+labelDropdown = dcc.Dropdown(value=1, options=[
+    {'label': 'Unlabelled', 'value': 0},
     {'label': 'No Fault (Green)', 'value': 1},
     {'label': 'Fault 1 (Red)', 'value': 2},
     {'label': 'Fault 2 (Orange)', 'value': 3},

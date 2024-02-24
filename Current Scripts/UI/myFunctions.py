@@ -167,13 +167,9 @@ def knee_point(X, k):
     return knee_point_value
 
 
-def performDBSCAN(data, n):
+def performDBSCAN(data, eps, minVal):
 
-    eps = knee_point(data, n+1)
-
-    print('Eps: ', eps)
-
-    dbscan = DBSCAN(eps=eps, min_samples=n+1)
+    dbscan = DBSCAN(eps=eps, min_samples=minVal)
     dbscan.fit(data)
     labels = dbscan.labels_.tolist()
     print('Number of labels: ', len(set(labels)))
@@ -243,7 +239,7 @@ def performAutoEncoding(data):
     # autoencoder.compile(optimizer='adam', loss='binary_crossentropy')
 
     # Record losses and epochs during training
-    num_epochs = 100
+    num_epochs = 50
     epochs = []
     losses = []
 
@@ -296,41 +292,9 @@ def performAutoEncoding(data):
     bottleneck = keras.Model(inputs=autoencoder.input,
                              outputs=autoencoder.get_layer('dense_1').output)
 
-    # Assuming 'data' is your input data
     # Transform data into the latent space
     latentSpace = bottleneck.predict(data)
-    # encoder = keras.Model(inputs=autoencoder.input, outputs=autoencoder.get_layer('encoder_1').output)
-    # encoded = keras.Model(inputs=autoencoder.input, outputs=encoder)
 
-    # # Get the latent space representation for the input data
-    # latent_space = encoded.predict(df)
-
-    # print('Latent space', latent_space)
-    # print('Latent space size: ', np.shape(latent_space))
-
-    # # Create a 3D plot
-    # fig = plt.figure()
-    # ax = fig.add_subplot(111, projection='3d')
-
-    # # Scatter plot the points in the latent space
-    # # ax.scatter(latent_space[:, 3], latent_space[:, 4],
-    # #           latent_space[:, 5], marker='o', s=10, c='r')
-
-    # for i in range(0, encoding_dimension):
-    #     text = 'Latent space', i
-    #     print(text, latent_space[:, i])
-
-    # latentSpaceDF = pd.DataFrame(latent_space)
-    # filepath = Path('./LatentSpace.csv')
-
-    # latentSpaceDF.to_csv(filepath)
-
-    # ax.set_xlabel('Latent Dimension 1')
-    # ax.set_ylabel('Latent Dimension 2')
-    # ax.set_zlabel('Latent Dimension 3')
-
-    # plt.title('Latent Space Visualization')
-    # plt.show()
     bottleneck_df = pd.DataFrame(
         data=latentSpace)
     return bottleneck_df
