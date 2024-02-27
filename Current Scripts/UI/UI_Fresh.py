@@ -338,7 +338,7 @@ def updatedText(values):
 
     if (values == None):
 
-        return ['xmeas_1']
+        return [data.columns[0]]
     if (len(values) > 4):
         values = values[1:]
 
@@ -366,6 +366,12 @@ def exportCSV(exportClicked, fileName):
               Output(sensorDropdown, 'value'),
               Output('sensor-checklist', 'options', allow_duplicate=True),
               Output(mainGraph, 'figure', allow_duplicate=True),
+              Output(xAxis_dropdown_3D, 'value'),
+              Output(xAxis_dropdown_3D, 'options'),
+              Output(yAxis_dropdown_3D, 'value'),
+              Output(yAxis_dropdown_3D, 'options'),
+              Output(zAxis_dropdown_3D, 'value'),
+              Output(zAxis_dropdown_3D, 'options'),
               [Input('upload-data', 'contents')],
               prevent_initial_call=True,)
 def update_output(contents):
@@ -381,16 +387,15 @@ def update_output(contents):
         data = pd.read_csv(decoded)
         data['labels'] = data['labels'] = [0]*data.shape[0]
         data['clusterLabels'] = [0]*data.shape[0]
-        print(data)
+        sensors = data.columns[1:len(data.columns)-2]
 
-        print(data.shape)
         x_0 = 0
         x_1 = data.shape[0]
 
-        shapes = []
+        # shapes = []
         layout = go.Layout(xaxis=dict(range=[x_0, x_1]))
-        print(data.columns[1])
-        return 'Success', data.columns, [data.columns[1]], data.columns, {'layout': layout}
+
+        return 'Success', sensors, [data.columns[1]], sensors, {'layout': layout}, data.columns[1], data.columns, data.columns[2], data.columns, data.columns[3], data.columns
     else:
         raise PreventUpdate
     # return html.Div([
@@ -823,7 +828,7 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
                         'x0': x0,
                         'x1': x1,
                         'y0': 0,
-                        'y1': 1,
+                        'y1': 0.05,
                         # 'fillcolor': colours[0][0],
                         'yref': 'paper',
                         'opacity': 0.2,
@@ -837,7 +842,7 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
                 'x0': x0,
                 'x1': len(data['labels']),
                 'y0': 0,
-                'y1': 1,
+                'y1': 0.05,
                 # 'fillcolor': colours[0][0],
                 'yref': 'paper',
                 'opacity': 0.2,
@@ -893,7 +898,9 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
         selectData = [go.Scatter(
             y=data.loc[:, yAxis_dropdown_3D], x=data.loc[:,
                                                          xAxis_dropdown_3D], mode='markers', marker={'color': [colours[val][0] for val in data['labels']], })]
-        layout = go.Layout(dragmode=dragMode)
+        layout = go.Layout(dragmode=dragMode, yaxis=dict(
+            title=yAxis_dropdown_3D), xaxis=dict(
+            title=xAxis_dropdown_3D))
         fig = {'data': selectData, 'layout': layout}
 
         # selectData = [go.Scatter(
@@ -1029,7 +1036,9 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
             # 'color': colours[0][0],
         },)]
         sensorDropdownStyle = {'display': 'none'}
-        layout = go.Layout()
+        layout = go.Layout(xaxis=dict(
+            title=xAxis_dropdown_3D), yaxis=dict(
+            title=yAxis_dropdown_3D), )
 
         fig = {'data': selectData, 'layout': layout}
 
@@ -1337,8 +1346,10 @@ def selectDeselectAll(selectClicks, deselectClicks, graphSensors, sensorDropdown
         deselectClicks = 0
     if switchView == None:
         switchView = 0
+
     if selectClicks == 1:
-        return data.columns[1:], 0, 0
+
+        return data.columns[1:], 0, 0, 0
     elif deselectClicks == 1:
         return [], 0, 0, 0
     elif graphSensors == 1:
@@ -1406,7 +1417,7 @@ def autoLabelStyles(clusterMethod, reductionMethod, switchView):
 
 )
 def autoLabelStyles(clusterMethod, sensorChecklist, reducedSize, reductionMethod):
-    print(sensorChecklist)
+
     if clusterMethod == 'DBSCAN' and sensorChecklist != []:
         df = data.loc[:, sensorChecklist]
         if reductionMethod == 'PCA':

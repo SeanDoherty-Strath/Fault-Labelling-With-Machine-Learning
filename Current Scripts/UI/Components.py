@@ -79,7 +79,7 @@ alert = dbc.Alert(
 )
 
 # Box 1
-sensorDropdown = dcc.Checklist(options=data.columns, value=['xmeas_1'], style={
+sensorDropdown = dcc.Checklist(options=data.columns, value=[data.columns[0]], style={
                                'fontsize': 18, 'fontFamily': 'Comic Sans MS'}, inline=True, labelStyle={'width': '50%'})
 sensorHeader = dcc.Markdown('Sensors', style={
     'fontSize': 26, 'fontWeight': 'bold', 'textAlign': 'center', })
