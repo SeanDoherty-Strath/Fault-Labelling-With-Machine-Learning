@@ -712,8 +712,8 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
         labelButtonTitle = 'New Label'
         ClusterDropdownContainer = {"display": "none"}
         # fig = px.scatter_3d(data, x='xmeas_1', y='xmeas_2', z='xmeas_3', text='Unnamed: 0', color_discrete_sequence=['black'])
-        fig = px.scatter(df, x=xAxis_dropdown_3D,
-                         y=yAxis_dropdown_3D, color='Time',)
+        fig = px.line(df, x=xAxis_dropdown_3D,
+                      y=yAxis_dropdown_3D, color='Time',)
 
         if t is not None:
             fig.add_scatter(x=[data[xAxis_dropdown_3D][t]], y=[

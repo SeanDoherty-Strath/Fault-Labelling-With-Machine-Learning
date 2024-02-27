@@ -43,6 +43,9 @@ x_1 = 5000
 colours = [['grey'], ['green'], ['red'], ['orange'], ['yellow'], ['pink'],
            ['purple'], ['lavender'], ['blue'], ['brown'], ['cyan']]
 
+greyColours = [['#000000'], ['#E0E0E0'], ['#606060'], ['#404040'], [
+    '#A0A0A0'], ['#FFFFFF'], ['#202020'], ['#808080'], ['#C0C0C0'],]
+
 
 # t is used to switch between time based view and 3D based view
 t = None
@@ -829,7 +832,7 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
                         'x1': x1,
                         'y0': 0,
                         'y1': 0.05,
-                        # 'fillcolor': colours[0][0],
+                        'fillcolor': greyColours[data['clusterLabels'][x0]][0],
                         'yref': 'paper',
                         'opacity': 0.2,
                         'name': 'area'+str(data['clusterLabels'][x0])
@@ -843,7 +846,7 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
                 'x1': len(data['labels']),
                 'y0': 0,
                 'y1': 0.05,
-                # 'fillcolor': colours[0][0],
+                'fillcolor': greyColours[data['clusterLabels'][x0]][0],
                 'yref': 'paper',
                 'opacity': 0.2,
                 'name': 'area'+str(data['clusterLabels'][x0])
@@ -895,9 +898,70 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
             labelButtonTitle = 'Confirm Label'
             dragMode = 'select'
 
-        selectData = [go.Scatter(
-            y=data.loc[:, yAxis_dropdown_3D], x=data.loc[:,
-                                                         xAxis_dropdown_3D], mode='markers', marker={'color': [colours[val][0] for val in data['labels']], })]
+        if (newAutoLabel == 1):
+
+            if (sensorChecklist == []):
+
+                alert2div['display'] = 'flex'
+                alert2 = 'Select sensors for auto-detection.'
+            else:
+                df = data.loc[:, sensorChecklist]
+
+                if (reductionMethod == 'PCA'):
+
+                    if (reducedSize == None or reducedSize < 2):
+
+                        alert2div['display'] = 'flex'
+                        alert2 = 'Wrong value input for PCA. Data reduction has failed.'
+
+                    else:
+                        df = performPCA(df, reducedSize)
+                elif (reductionMethod == 'Auto-encoding'):
+
+                    df = performAutoEncoding(df)
+
+                if (clusterMethod == 'K Means'):
+                    if (K == None or K < 0):
+
+                        alert2div['display'] = 'flex'
+                        alert2 = 'Wrong value input for K Means. Clustering has failed.'
+
+                    else:
+                        if (K > 10 or K <= 1):
+
+                            alert2div['display'] = 'flex'
+                            alert2 = 'Select a value between 1 and 10 for K.'
+                        else:
+                            data['labels'] = [0]*data.shape[0]
+                            data['clusterLabels'] = performKMeans(df, K)
+
+                elif (clusterMethod == 'DBSCAN'):
+                    # left in for wrong input
+                    if (False):
+
+                        alert2div['display'] = 'flex'
+                        alert2 = 'Wrong input. Clustering has failed.'
+
+                    else:
+                        n = len(sensorChecklist)
+                        data['labels'] = [0]*data.shape[0]
+                        data['clusterLabels'] = performDBSCAN(df, eps, minVal)
+
+                clusterDropdownOptions = list(set(data['clusterLabels']))
+                clusterDropdownValue = clusterDropdownOptions
+                ClusterColourContainer = {
+                    'display': 'block', 'width': 200, 'padding': 20}
+
+                x_0 = 0
+                x_1 = data.shape[0]
+
+                selectData = [go.Scatter(
+                    y=data.loc[:, yAxis_dropdown_3D], x=data.loc[:,
+                                                                 xAxis_dropdown_3D], text=data.loc[:, 'clusterLabels'], mode='markers', marker={'color': [greyColours[val][0] for val in data['clusterLabels']], })]
+        else:
+            selectData = [go.Scatter(
+                y=data.loc[:, yAxis_dropdown_3D], x=data.loc[:,
+                                                             xAxis_dropdown_3D], text=data.loc[:, 'labels'], mode='markers', marker={'color': [colours[val][0] for val in data['labels']], })]
         layout = go.Layout(dragmode=dragMode, yaxis=dict(
             title=yAxis_dropdown_3D), xaxis=dict(
             title=xAxis_dropdown_3D))
@@ -976,6 +1040,16 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
 
                 x_0 = 0
                 x_1 = data.shape[0]
+                selectData = [go.Scatter3d(y=data.loc[:, yAxis_dropdown_3D], z=data.loc[:,
+                                                                                        zAxis_dropdown_3D], x=data.loc[:, xAxis_dropdown_3D], mode='markers',
+                                           marker={
+                    'size': 10,
+                    'opacity': 1,
+                    # 'color': 'red'
+                    # Set color based on 'labels' column
+                    'color': [greyColours[val][0] for val in data['clusterLabels']],
+                    # 'color': colours[0][0],
+                },)]
 
                 # if (len(clusterDropdownOptions) > 10):
                 #     alert = True
@@ -1024,17 +1098,17 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
         #     # 'color': [colours[val][0] for val in data['labels']],
         #     'color': colours[0][0],
         # },)]
-
-        selectData = [go.Scatter3d(y=data.loc[:, yAxis_dropdown_3D], z=data.loc[:,
-                                                                                zAxis_dropdown_3D], x=data.loc[:, xAxis_dropdown_3D], mode='markers',
-                                   marker={
-            'size': 10,
-            'opacity': 1,
-            # 'color': 'red'
-            # Set color based on 'labels' column
-            'color': [colours[val][0] for val in data['labels']],
-            # 'color': colours[0][0],
-        },)]
+        else:
+            selectData = [go.Scatter3d(y=data.loc[:, yAxis_dropdown_3D], z=data.loc[:,
+                                                                                    zAxis_dropdown_3D], x=data.loc[:, xAxis_dropdown_3D], mode='markers',
+                                       marker={
+                'size': 10,
+                'opacity': 1,
+                # 'color': 'red'
+                # Set color based on 'labels' column
+                'color': [colours[val][0] for val in data['labels']],
+                # 'color': da,
+            },)]
         sensorDropdownStyle = {'display': 'none'}
         layout = go.Layout(xaxis=dict(
             title=xAxis_dropdown_3D), yaxis=dict(
@@ -1122,7 +1196,7 @@ def autoLabelOptions(startAutoLabelClicks):
             )
         )
     dropdowns.append(
-        html.Button('Colour Now', id='colorNow')
+        html.Button('Confirm Labels', id='colorNow')
     )
 
     return dropdowns
