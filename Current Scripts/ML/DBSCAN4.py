@@ -31,16 +31,16 @@ def knee_point(X, k):
 # Example usage
 # X is your data
 # k is the number of nearest neighbors to consider
-data = pd.read_csv("Data/UpdatedData.csv")
+data = pd.read_csv("Data/UpdatedDataFebruary24.csv")
 X = data.drop(data.columns[[0, 1, 2, 3]], axis=1)  # Remove extra columns
 # X = StandardScaler().fit_transform(data)
 
 # df = StandardScaler().fit_transform(data)
 # X = np.random.rand(100, 2)  # Example random 2D data
-k = 10  # Choose the number of nearest neighbors
+k = 52  # Choose the number of nearest neighbors
 
 # Calculate the knee point
-epsilon = knee_point(X, 10)
+epsilon = knee_point(X, k+1)
 print('epsilon: ', epsilon)
 
 # Plot the sorted distances
