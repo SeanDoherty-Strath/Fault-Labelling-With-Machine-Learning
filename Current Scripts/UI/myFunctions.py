@@ -36,7 +36,7 @@ for i in range(52):
     sensors.append(temp)
     # print(sensors)
 
-print(sensors)
+# print(sensors)
 
 
 def performPCA(df, n):
@@ -146,11 +146,14 @@ def findBestParams(data, Range):
 
 def knee_point(X, k):
     # Fit a k-nearest neighbor model
+    scaler = StandardScaler()
+    normalized_values = scaler.fit_transform(X)
+
     nn = NearestNeighbors(n_neighbors=k)
-    nn.fit(X)
+    nn.fit(normalized_values)
 
     # Compute distances to k-nearest neighbors
-    distances, _ = nn.kneighbors(X)
+    distances, _ = nn.kneighbors(normalized_values)
     avg_distances = np.mean(distances, axis=1)
 
     # Sort distances in ascending order
@@ -169,8 +172,11 @@ def knee_point(X, k):
 
 def performDBSCAN(data, eps, minVal):
 
+    scaler = StandardScaler()
+    normalized_values = scaler.fit_transform(data)
+
     dbscan = DBSCAN(eps=eps, min_samples=minVal)
-    dbscan.fit(data)
+    dbscan.fit(normalized_values)
     labels = dbscan.labels_.tolist()
     print('Number of labels: ', len(set(labels)))
     return labels

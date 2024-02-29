@@ -173,23 +173,16 @@ app.layout = html.Div(style={'background': 'linear-gradient(to bottom, blue, #00
             #  Box 2
             html.Div(style={'border-radius': '10px', 'width': '100%', 'height': '47%', 'background-color': 'white', },
                      children=[
-                # zoom,
-                # pan
-                dcc.Markdown('Labeller', style={
-                             'fontSize': 26, 'fontWeight': 'bold', 'textAlign': 'center', }),
-
+                         html.Div(style={'display': 'flex', 'flex-direction': 'column', 'justify-content': 'center', 'text-align': 'left',  'align-items': 'center'},
+                                  children=[
+                             dcc.Markdown("Fault Labeller", style={'margin': '20', 'fontSize': 24, 'fontWeight': 'bold'})]),
                 labelDropdown,
                 html.Button(children='Start Label', id='labelButton', style={
                     'width': '100%', 'height': 40, 'fontSize': 16}),
 
                 html.Button('Remove Labels', id='removeLabels', style={'height': 40,
                                                                        'width': '100%'}),
-                # html.Button('Undo Label', id='undoLabel', style={
-                #     'width': '50%'}),
-                # html.Button('Change Label', id='changeLabel', style={
-                #     'width': '50%'}),
-                # html.Button('Move Label', id='moveLabel', style={
-                #     'width': '50%'}),
+
             ]),
 
             html.Div(
@@ -198,9 +191,10 @@ app.layout = html.Div(style={'background': 'linear-gradient(to bottom, blue, #00
             #  Box 3
             html.Div(style={'border-radius': '10px', 'width': '100%', 'height': '47%', 'background-color': 'white'},
                      children=[
-                html.Div(style={'display': 'flex', 'flex-direction': 'column', 'justify-content': 'center', 'text-align': 'left', 'align-items': 'center'},
+                html.Div(style={'display': 'flex', 'flex-direction': 'column', 'justify-content': 'center', 'text-align': 'left',  'align-items': 'center'},
                          children=[
-                    faultFinderHeader,
+                    dcc.Markdown("Navigator", style={
+                                 'margin': '20', 'fontSize': 24, 'fontWeight': 'bold'}),
                     html.Div(style={'flex-direction': 'column', 'display': 'flex', 'width': '90%'}, children=[
                         faultFinderText,
                         faultFinder
@@ -272,7 +266,7 @@ app.layout = html.Div(style={'background': 'linear-gradient(to bottom, blue, #00
                 dcc.Markdown('Epsilon:',  style={
                              'margin-left': 10, 'width': '50%'}),
                 html.Div(style={'width': '100%'}, children=[
-                    dcc.Slider(id='eps-slider', min=1, max=60,  marks={i: str(i) for i in range(0, 60, 5)}, step=1, value=32)]),
+                    dcc.Slider(id='eps-slider', min=0, max=2,  marks={i: str(i) for i in range(0, 2)}, step=0.1, value=0.1)]),
             ]),
             html.Div(id='minVal', style={'display': 'flex', }, children=[
                 dcc.Markdown('Min Value:', style={
@@ -534,6 +528,7 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
     xAxis_dropdown_3D_style = {"display": "none"}
     yAxis_dropdown_3D_style = {"display": "none"}
     zAxis_dropdown_3D_style = {"display": "none"}
+    alert2div['display'] = 'none'
 
     if (removeLabelClick == 1):
         data.loc[:, 'labels'] = 0
@@ -937,7 +932,9 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
 
                 alert2div['display'] = 'flex'
                 alert2 = 'Select sensors for auto-detection.'
+
             else:
+
                 df = data.loc[:, sensorChecklist]
 
                 if (reductionMethod == 'PCA'):
@@ -948,7 +945,9 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
                         alert2 = 'Wrong value input for PCA. Data reduction has failed.'
 
                     else:
+
                         df = performPCA(df, reducedSize)
+
                 elif (reductionMethod == 'Auto-encoding'):
 
                     df = performAutoEncoding(df)
@@ -970,18 +969,31 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
 
                 elif (clusterMethod == 'DBSCAN'):
                     # left in for wrong input
-                    if (False):
+                    if (eps == None or minVal == None):
 
                         alert2div['display'] = 'flex'
-                        alert2 = 'Wrong input. Clustering has failed.'
+                        alert2 = 'Incorrect parameter for eps or min points.'
 
                     else:
+                        # data['labels'] = [0]*data.shape[0]
+                        # n = len(sensorChecklist)
+                        # data['clusterLabels'] = performDBSCAN(df, n)
                         n = len(sensorChecklist)
-                        data['labels'] = [0]*data.shape[0]
-                        data['clusterLabels'] = performDBSCAN(df, eps, minVal)
+                        temp = performDBSCAN(df, eps, minVal)
+                        if len(list(set(temp))) >= 10:
+                            alert2div['display'] = 'flex'
+                            alert2 = 'DBSCAN produced too many clusters. Try increasing epsilon or decreasing min points.'
+                        elif (len(list(set(temp))) == 1):
+                            alert2div['display'] = 'flex'
+                            alert2 = 'DBSCAN produced only outliers. Try decreasing epsilon or decreasing min points.'
+                        else:
+                            data['labels'] = [0]*data.shape[0]
+                            data['clusterLabels'] = performDBSCAN(
+                                df, eps, minVal)
 
-                clusterDropdownOptions = list(set(data['clusterLabels']))
-                clusterDropdownValue = clusterDropdownOptions
+                # clusterDropdownOptions = list(set(data['clusterLabels']))
+                # clusterDropdownValue = clusterDropdownOptions
+
                 ClusterColourContainer = {
                     'display': 'block', 'width': 200, 'padding': 20}
 
@@ -1023,7 +1035,9 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
 
                 alert2div['display'] = 'flex'
                 alert2 = 'Select sensors for auto-detection.'
+
             else:
+
                 df = data.loc[:, sensorChecklist]
 
                 if (reductionMethod == 'PCA'):
@@ -1034,7 +1048,9 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
                         alert2 = 'Wrong value input for PCA. Data reduction has failed.'
 
                     else:
+
                         df = performPCA(df, reducedSize)
+
                 elif (reductionMethod == 'Auto-encoding'):
 
                     df = performAutoEncoding(df)
@@ -1056,23 +1072,39 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
 
                 elif (clusterMethod == 'DBSCAN'):
                     # left in for wrong input
-                    if (False):
+                    if (eps == None or minVal == None):
 
                         alert2div['display'] = 'flex'
-                        alert2 = 'Wrong input. Clustering has failed.'
+                        alert2 = 'Incorrect parameter for eps or min points.'
 
                     else:
+                        # data['labels'] = [0]*data.shape[0]
+                        # n = len(sensorChecklist)
+                        # data['clusterLabels'] = performDBSCAN(df, n)
                         n = len(sensorChecklist)
-                        data['labels'] = [0]*data.shape[0]
-                        data['clusterLabels'] = performDBSCAN(df, eps, minVal)
+                        temp = performDBSCAN(df, eps, minVal)
+                        if len(list(set(temp))) >= 10:
+                            alert2div['display'] = 'flex'
+                            alert2 = 'DBSCAN produced too many clusters. Try increasing epsilon or decreasing min points.'
+                        elif (len(list(set(temp))) == 1):
+                            alert2div['display'] = 'flex'
+                            alert2 = 'DBSCAN produced only outliers. Try decreasing epsilon or decreasing min points.'
+                        else:
+                            data['labels'] = [0]*data.shape[0]
+                            data['clusterLabels'] = performDBSCAN(
+                                df, eps, minVal)
 
-                clusterDropdownOptions = list(set(data['clusterLabels']))
-                clusterDropdownValue = clusterDropdownOptions
-                ClusterColourContainer = {
-                    'display': 'block', 'width': 200, 'padding': 20}
+                # clusterDropdownOptions = list(set(data['clusterLabels']))
+                # clusterDropdownValue = clusterDropdownOptions
 
                 x_0 = 0
                 x_1 = data.shape[0]
+
+                # clusterDropdownOptions = list(set(data['clusterLabels']))
+                # clusterDropdownValue = clusterDropdownOptions
+                ClusterColourContainer = {
+                    'display': 'block', 'width': 200, 'padding': 20}
+
                 selectData = [go.Scatter3d(y=data.loc[:, yAxis_dropdown_3D], z=data.loc[:,
                                                                                         zAxis_dropdown_3D], x=data.loc[:, xAxis_dropdown_3D], mode='markers',
                                            marker={
@@ -1421,7 +1453,7 @@ def update_textbox(click_data, switchViewClicks, alertstyle, alert):
 
     #     return alertstyle, alert
     # else:
-
+    alertstyle['style'] = 'none'
     labels = ['Unlabelled', 'No Fault', 'Fault 1', 'Fault 2', 'Fault 3',
               'Fault 4', 'Fault 5', 'Fault 6', 'Fault 7', 'Fault 8', 'Fault 9', 'Fault 10']
 
@@ -1557,7 +1589,7 @@ def autoLabelStyles(clusterMethod, reductionMethod, switchView):
     Input(reductionMethod, 'value')
 
 )
-def autoLabelStyles(clusterMethod, sensorChecklist, reducedSize, reductionMethod):
+def DBSCAN_parameterSelection(clusterMethod, sensorChecklist, reducedSize, reductionMethod):
     print(sensorChecklist)
     if clusterMethod == 'DBSCAN' and sensorChecklist != []:
         df = data.loc[:, sensorChecklist]
