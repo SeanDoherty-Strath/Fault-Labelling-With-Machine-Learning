@@ -74,6 +74,28 @@ app.layout = html.Div(style={'background': 'linear-gradient(to bottom, blue, #00
             dcc.Markdown('Message', id='alert2', style={'fontSize': 24})
         ]
     ),
+
+    html.Div(
+        id='alert1div',
+        style={
+            'display': 'none',
+
+            'backgroundColor': 'white',
+            'border': '5px solid black',
+            'border-radius': 15,
+            'margin': 20,
+            'align-items': 'center',
+
+            'width': '90%',
+            'height': 50,
+            'flex-direction': 'row',
+        },
+        children=[
+            dcc.Markdown('Click Data: ', style={
+                         'fontSize': 24, 'fontWeight': 'bold', 'padding': 10}),
+            dcc.Markdown('Message', id='alert1', style={'fontSize': 24})
+        ]
+    ),
     # html.Div(style={'height': '5%', 'width': '90%'},
     #          children=[title,
     #                    ]),
@@ -277,8 +299,8 @@ app.layout = html.Div(style={'background': 'linear-gradient(to bottom, blue, #00
                          dcc.Markdown('Stats', style={
                              'fontSize': 26, 'fontWeight': 'bold', 'textAlign': 'center', }),
                 stat1, stat2, stat3,
-                dcc.Markdown(
-                    'Shape clicked', id='shape-clicked'),
+                # dcc.Markdown(
+                #     'Shape clicked', id='shape-clicked'),
                 dcc.Markdown('Points Output:', id='points-output', style={"display": "block"}),]
             ),
             html.Div(
@@ -735,7 +757,9 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
                         alert2 = 'Wrong value input for PCA. Data reduction has failed.'
 
                     else:
+
                         df = performPCA(df, reducedSize)
+
                 elif (reductionMethod == 'Auto-encoding'):
 
                     df = performAutoEncoding(df)
@@ -757,21 +781,30 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
 
                 elif (clusterMethod == 'DBSCAN'):
                     # left in for wrong input
-                    if (False):
+                    if (eps == None or minVal == None):
 
                         alert2div['display'] = 'flex'
-                        alert2 = 'Select a value between 1 and 10 for K.'
+                        alert2 = 'Incorrect parameter for eps or min points.'
 
                     else:
                         # data['labels'] = [0]*data.shape[0]
                         # n = len(sensorChecklist)
                         # data['clusterLabels'] = performDBSCAN(df, n)
                         n = len(sensorChecklist)
-                        data['labels'] = [0]*data.shape[0]
-                        data['clusterLabels'] = performDBSCAN(df, eps, minVal)
+                        temp = performDBSCAN(df, eps, minVal)
+                        if len(list(set(temp))) >= 10:
+                            alert2div['display'] = 'flex'
+                            alert2 = 'DBSCAN produced too many clusters. Try increasing epsilon or decreasing min points.'
+                        elif (len(list(set(temp))) == 1):
+                            alert2div['display'] = 'flex'
+                            alert2 = 'DBSCAN produced only outliers. Try decreasing epsilon or decreasing min points.'
+                        else:
+                            data['labels'] = [0]*data.shape[0]
+                            data['clusterLabels'] = performDBSCAN(
+                                df, eps, minVal)
 
-                clusterDropdownOptions = list(set(data['clusterLabels']))
-                clusterDropdownValue = clusterDropdownOptions
+                # clusterDropdownOptions = list(set(data['clusterLabels']))
+                # clusterDropdownValue = clusterDropdownOptions
 
                 ClusterColourContainer = {
                     'display': 'block', 'width': 200, 'padding': 20}
@@ -1277,6 +1310,7 @@ def colorLabels(colorNow, area0, area1, area2, area3, area4, area5, area6, area7
                     else:
                         data.loc[i, 'labels'] = areas[j]
 
+        data['clusterLabels'] = [0]*data.shape[0]
         ClusterColourContainer = {'display': 'none'}
 
         return 0, ClusterColourContainer, alert2div, alertMessage
@@ -1364,38 +1398,71 @@ def display_coordinates(click_data, switchViewClicks):
 
 
 @app.callback(
-    Output('shape-clicked', 'children'),
+    Output('alert1div', 'style'),
+    Output('alert1', 'children'),
     [Input(mainGraph, 'clickData')],
-    State('switchView', 'n_clicks')
+    State('switchView', 'n_clicks'),
+    State('alert1div', 'style'),
+    State('alert1', 'children')
 )
-def update_textbox(click_data, switchViewClicks):
+def update_textbox(click_data, switchViewClicks, alertstyle, alert):
     if (switchViewClicks == None):
         switchViewClicks = 0
 
     if click_data is None:
-        return "Click on a shape to see its information"
-    else:
+        raise PreventUpdate
 
-        if (switchViewClicks % 3 == 0):
-            # Find the shape that was clicked
-            clicked_shape_info = None
-            for shape in shapes:
-                if (
-                    shape['x0'] <= click_data['points'][0]['x'] and
-                    shape['x1'] >= click_data['points'][0]['x']
-                ):
-                    clicked_shape_info = shape['name']
+    # if (len(set(data['clusterLabels'])) != 1):
+    #     t = round(click_data['points'][0]['pointNumber'])
+    #     label = data['clusterLabels'][t]
+    #     alertstyle['display'] = 'flex'
+    #     alert = 'This point (t = ' + str(t) + \
+    #         ') belongs to Area ', str(label)
 
-                    break
+    #     return alertstyle, alert
+    # else:
 
-            if clicked_shape_info:
-                return f"Clicked Shape Info: {clicked_shape_info}"
-            else:
-                return "No shape clicked"
-        elif (switchViewClicks % 3 == 1):
-            return '2D Plot'
-        elif (switchViewClicks % 3 == 2):
-            return '3D Plot'
+    labels = ['Unlabelled', 'No Fault', 'Fault 1', 'Fault 2', 'Fault 3',
+              'Fault 4', 'Fault 5', 'Fault 6', 'Fault 7', 'Fault 8', 'Fault 9', 'Fault 10']
+
+    t = round(click_data['points'][0]['pointNumber'])
+    label = data['labels'][t]
+    alertstyle['display'] = 'flex'
+    alert = 'This point (t = ' + str(t) + \
+        ') is labelled as ', str(labels[label])
+
+    return alertstyle, alert
+
+# def update_textbox(click_data, switchViewClicks):
+#     if (switchViewClicks == None):
+#         switchViewClicks = 0
+
+#     print(click_data)
+
+#     if click_data is None:
+#         return "Click on a shape to see its information"
+#     else:
+
+#         if (switchViewClicks % 3 == 0):
+#             # Find the shape that was clicked
+#             clicked_shape_info = None
+#             for shape in shapes:
+#                 if (
+#                     shape['x0'] <= click_data['points'][0]['x'] and
+#                     shape['x1'] >= click_data['points'][0]['x']
+#                 ):
+#                     clicked_shape_info = shape['name']
+
+#                     break
+
+#             if clicked_shape_info:
+#                 return f"Clicked Shape Info: {clicked_shape_info}"
+#             else:
+#                 return "No shape clicked"
+#         elif (switchViewClicks % 3 == 1):
+#             return '2D Plot'
+#         elif (switchViewClicks % 3 == 2):
+#             return '3D Plot'
 
 
 @app.callback(
@@ -1491,11 +1558,12 @@ def autoLabelStyles(clusterMethod, reductionMethod, switchView):
 
 )
 def autoLabelStyles(clusterMethod, sensorChecklist, reducedSize, reductionMethod):
-
+    print(sensorChecklist)
     if clusterMethod == 'DBSCAN' and sensorChecklist != []:
         df = data.loc[:, sensorChecklist]
         if reductionMethod == 'PCA':
-            df = performPCA(df, reducedSize)
+            if reducedSize != None:
+                df = performPCA(df, reducedSize)
         elif reductionMethod == 'Auto-encoding':
             df = performAutoEncoding(df)
 
