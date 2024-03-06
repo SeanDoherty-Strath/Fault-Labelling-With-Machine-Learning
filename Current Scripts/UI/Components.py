@@ -80,12 +80,25 @@ alert = dbc.Alert(
 
 # Box 1
 sensorDropdown = dcc.Checklist(options=data.columns, value=[data.columns[0]], style={
-                               'fontsize': 18, 'fontFamily': 'Comic Sans MS'}, inline=True, labelStyle={'width': '50%'})
+                               'fontSize': 20, 'margin': 10}, inline=True, labelStyle={'width': '33%'})
+sensorText = dcc.Markdown(
+    'Select which sensors you wish to see in the graph above.', style={'textAlign': 'center', 'fontSize': 18})
 sensorHeader = dcc.Markdown('Sensors', style={
     'fontSize': 26, 'fontWeight': 'bold', 'textAlign': 'center', })
-xAxis_dropdown_3D = dcc.Dropdown(value=data.columns[0], options=data.columns)
-yAxis_dropdown_3D = dcc.Dropdown(value=data.columns[1], options=data.columns)
-zAxis_dropdown_3D = dcc.Dropdown(value=data.columns[2], options=data.columns)
+xAxis_dropdown_3D = dcc.Dropdown(
+    value=data.columns[0], options=data.columns, style={'width': '50%'})
+yAxis_dropdown_3D = dcc.Dropdown(
+    value=data.columns[1], options=data.columns, style={'width': '50%'})
+zAxis_dropdown_3D = dcc.Dropdown(
+    value=data.columns[2], options=data.columns, style={'width': '50%'})
+
+xAxisText = dcc.Markdown(
+    'x axis: ', style={'margin-left': 50, 'fontSize': 20, 'width': '50%'})
+yAxisText = dcc.Markdown(
+    'y axis: ', style={'margin-left': 50, 'fontSize': 20, 'width': '50%'})
+zAxisText = dcc.Markdown(
+    'z axis: ', style={'margin-left': 50, 'fontSize': 20, 'width': '50%'})
+
 
 # Box 2
 zoom = dcc.Slider(0, 10, 1, value=0)
@@ -94,9 +107,10 @@ pan = dcc.Slider(0, 2000, 100, value=0)
 
 faultFinderHeader = html.H3("Fault Finder", style={'margin': '0'})
 
-faultFinderText = html.P('Find next:')
+faultFinderText = dcc.Markdown(
+    'Search for:', style={'fontSize': 20, 'width': '25%'})
 faultFinder = dcc.Dropdown(value='Unlabelled Data Point', options=[
-                           'Unlabelled Data Point', 'No Fault', 'Fault 1', 'Fault 2', 'Fault 3'])
+                           'Unlabelled Data Points', 'No Fault', 'Fault 1', 'Fault 2', 'Fault 3'], style={'width': '90%'})
 
 
 # Box 4
@@ -111,7 +125,8 @@ labelDropdown = dcc.Dropdown(value=1, options=[
     {'label': 'Fault 6 (Lavender)', 'value': 7},
     {'label': 'Fault 7 (Blue)', 'value': 8},
     {'label': 'Fault 8 (Brown)', 'value': 9},
-    {'label': 'Fault 9 (Cyan)', 'value': 10}])
+    {'label': 'Fault 9 (Cyan)', 'value': 10}],
+    style={'height': '20%'})
 
 
 # Multi-Graph View
@@ -169,12 +184,15 @@ stats = html.Div(style={'display': 'flex', 'flex-direction': 'column', 'justify-
 ]
 )
 
-stat1 = dcc.Markdown('No. Labels Placed: ', style={'margin': '0'})
-stat2 = dcc.Markdown('No. Types Labels Placed: ', style={'margin': '0'})
-stat3 = dcc.Markdown('Data points unlabelled: ', style={'margin': '0'})
+stat1 = dcc.Markdown('No. Labels Placed: ', style={
+                     'margin-left': 10, 'fontSize': 20})
+stat2 = dcc.Markdown('No. Types Labels Placed: ', style={
+                     'display': 'none'})
+stat3 = dcc.Markdown('Data points unlabelled: ', style={
+                     'margin-left': 10, 'fontSize': 20})
 
 
-AI_header = dcc.Markdown('Auto Label', style={
+AI_header = dcc.Markdown('Automatically Label Faults', style={
                          'fontSize': 26, 'fontWeight': 'bold', 'textAlign': 'center', })
 AI_text1 = dcc.Markdown('Clustering Method:', style={
                         'width': '50%', 'margin-left': 10, })
@@ -193,7 +211,7 @@ uploadData = dcc.Upload(
 
     children=html.Div([
         'Drag and Drop or ',
-        html.A('Select Files')
+        html.A('Select Files'),
     ]),
     style={
         'width': '100%',
@@ -209,13 +227,13 @@ uploadData = dcc.Upload(
     multiple=False
 ),
 
-exportHeader = html.H3('Export to CSV')
+exportHeader = html.H3('Import / Export Data')
 
 exportName = dcc.Input(
-    id='file-name',
+    id='LabelledData',
     type='text',
     value='Filename',
-    style={'width': '100%', 'height': 30, 'fontSize': 20
+    style={'width': '70%', 'height': 30, 'fontSize': 20
            }
 )
 

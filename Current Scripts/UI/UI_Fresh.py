@@ -17,7 +17,7 @@ import base64  # Import base64 module
 
 # Internal Components and Functions
 from Components import mainGraph, xAxis_dropdown_3D, yAxis_dropdown_3D, zAxis_dropdown_3D, faultFinder, alert
-from Components import title, sensorDropdown, sensorHeader, labelDropdown, stat3, faultFinderHeader, faultFinderText, stat1, stat2, exportName, exportConfirm, AI_header, clusterMethod, reductionMethod
+from Components import xAxisText, yAxisText, zAxisText, sensorText, sensorDropdown, sensorHeader, labelDropdown, stat3, faultFinderHeader, faultFinderText, stat1, stat2, exportName, exportConfirm, AI_header, clusterMethod, reductionMethod
 from myFunctions import performKMeans, performPCA, performDBSCAN, performAutoEncoding, findBestParams, knee_point
 
 app = dash.Dash(__name__)
@@ -101,7 +101,7 @@ app.layout = html.Div(style={'background': 'linear-gradient(to bottom, blue, #00
     #                    ]),
 
     # Top Box
-    html.Div(style={'overflow': 'scroll', 'width': '90%', 'height': '55%', 'margin': '20px', 'border-radius': '10px', 'padding': '20px', 'background-color': 'white'},
+    html.Div(style={'width': '90%', 'height': '55%', 'margin': '20px', 'border-radius': '10px', 'padding': '20px', 'background-color': 'white'},
              children=[
 
 
@@ -143,12 +143,12 @@ app.layout = html.Div(style={'background': 'linear-gradient(to bottom, blue, #00
             # alert,
 
 
-            html.Div(id='ClusterDropdownContainer', style={"display": "none"}, children=[
-                dcc.Markdown("Show Clusters", style={
-                             'fontSize': 30, 'fontWeight': 'bold'}),
-                dcc.Checklist(id='clusterDropdown', options=[],
-                              style={}),
-            ])
+            # html.Div(id='ClusterDropdownContainer', style={"display": "none"}, children=[
+            #     dcc.Markdown("Show Clusters", style={
+            #                  'fontSize': 30, 'fontWeight': 'bold'}),
+            #     dcc.Checklist(id='clusterDropdown', options=[],
+            #                   style={}),
+            # ])
         ])
 
         # dcc.Graph(id='tempGraph')
@@ -163,10 +163,16 @@ app.layout = html.Div(style={'background': 'linear-gradient(to bottom, blue, #00
         html.Div(style={'overflow': 'scroll', 'border-radius': '10px', 'width': '24%', 'height': '100%',  'background-color': 'white'},
                  children=[
             sensorHeader,
+            sensorText,
             sensorDropdown,
-            xAxis_dropdown_3D,
-            yAxis_dropdown_3D,
-            zAxis_dropdown_3D]),
+            html.Div(id='xAxisDropdownContainer', style={'display': 'flex', 'width': '100%'}, children=[
+                     xAxisText, xAxis_dropdown_3D]),
+            html.Div(id='yAxisDropdownContainer', style={'display': 'flex', 'width': '100%'}, children=[
+                     yAxisText, yAxis_dropdown_3D]),
+            html.Div(id='zAxisDropdownContainer', style={'display': 'flex', 'width': '100%'}, children=[
+                     zAxisText, zAxis_dropdown_3D]),
+
+        ]),
 
 
         html.Div(style={'width': '24%', 'height': '100%', }, children=[
@@ -175,12 +181,13 @@ app.layout = html.Div(style={'background': 'linear-gradient(to bottom, blue, #00
                      children=[
                          html.Div(style={'display': 'flex', 'flex-direction': 'column', 'justify-content': 'center', 'text-align': 'left',  'align-items': 'center'},
                                   children=[
-                             dcc.Markdown("Fault Labeller", style={'margin': '20', 'fontSize': 24, 'fontWeight': 'bold'})]),
+                             dcc.Markdown("Manually Label Faults", style={'height': '20%', 'fontSize': 24, 'fontWeight': 'bold'})]),
+
                 labelDropdown,
                 html.Button(children='Start Label', id='labelButton', style={
-                    'width': '100%', 'height': 40, 'fontSize': 16}),
+                    'width': '100%', 'height': '20%', 'fontSize': 16}),
 
-                html.Button('Remove Labels', id='removeLabels', style={'height': 40,
+                html.Button('Remove Labels', id='removeLabels', style={'height': '20%',
                                                                        'width': '100%'}),
 
             ]),
@@ -195,13 +202,17 @@ app.layout = html.Div(style={'background': 'linear-gradient(to bottom, blue, #00
                          children=[
                     dcc.Markdown("Navigator", style={
                                  'margin': '20', 'fontSize': 24, 'fontWeight': 'bold'}),
-                    html.Div(style={'flex-direction': 'column', 'display': 'flex', 'width': '90%'}, children=[
-                        faultFinderText,
+
+                    html.Div(style={'display': 'flex', 'width': '100%'}, children=[
+                        dcc.Markdown(
+                            'Search for:', style={'margin-left': 10, 'width': '25%'}),
                         faultFinder
                     ]),
                     html.Div(style={'flex-direction': 'row'}, children=[
-                        html.Button('Prev', id='findPrev'),
-                        html.Button('Next', id='findNext'),
+                        html.Button('Previous', id='findPrev', style={
+                            'width': 80, 'height': 25, 'margin': 10, 'fontSize': 16}),
+                        html.Button('Next', id='findNext', style={
+                            'width': 80, 'height': 25, 'margin': 10, 'fontSize': 16})
                     ])
 
 
@@ -213,25 +224,31 @@ app.layout = html.Div(style={'background': 'linear-gradient(to bottom, blue, #00
         html.Div(style={'overflow': 'scroll',  'border-radius': '10px', 'width': '24%', 'height': '100%', 'background-color': 'white'},
                  children=[
             AI_header,
+            dcc.Markdown(
+                "Follow the steps to auto label the data set.  This will suggest the time and duration of faults. ", style={'textAlign': 'center', 'fontSize': 20}),
 
             dcc.Markdown('Sensors: ', style={
                 'fontSize': 22, 'fontWeight': 'bold', 'margin-left': 10, }),
-            html.Div(style={'display': 'flex', }, children=[
+            dcc.Markdown(
+                "Start by selecting the sensors associated with the fault:", style={'margin-left': 10, 'fontSize': 20}),
+            html.Div(style={'display': 'flex'}, children=[
 
                 html.Button(
-                    "Select all", id='select-all'),
+                    "Select all", id='select-all', style={'width': 100, 'margin': 5, }),
                 html.Button(
-                    "Deselect all", id='deselect-all'),
+                    "Deselect all", id='deselect-all', style={'width': 100, 'margin': 5, }),
                 html.Button(
-                    "Select Sensors in Graph", id='graphSensors'),
+                    "Select Sensors in Graph", id='graphSensors', style={'width': 180, 'margin': 5})
             ]),
-            html.Div(style={'width': '100%', 'height': 150, 'overflow': 'scroll'}, children=[
+            html.Div(style={'width': '100%', 'overflow': 'scroll'}, children=[
                 dcc.Checklist(
-                    id='sensor-checklist', options=data.columns[1:53], inline=True, labelStyle={'width': '33%'})
+                    id='sensor-checklist', options=data.columns[1:53], inline=True, labelStyle={'width': '25%', 'fontSize': 14})
             ]),
 
             dcc.Markdown('Feature Reduction: ', style={
                 'fontSize': 22, 'fontWeight': 'bold', 'margin-left': 10, }),
+            dcc.Markdown(
+                "Clustering on many sensors can be poor.  Reduce the feature set through either PCA (recommended) or autoencoding.", style={'margin-left': 10, 'fontSize': 20}),
             html.Div(style={'display': 'flex', }, children=[
                 dcc.Markdown(
                     'Reduction Method:', style={'margin-left': 10, 'width': '50%'}),
@@ -247,6 +264,8 @@ app.layout = html.Div(style={'background': 'linear-gradient(to bottom, blue, #00
 
             dcc.Markdown('Clustering: ', style={
                 'fontSize': 22, 'fontWeight': 'bold', 'margin-left': 10, }),
+            dcc.Markdown(
+                "Select the clustering algorithm.  Use K-means if you know the number of faults (recommended) or DBSCAN if you do not.", style={'margin-left': 10, 'fontSize': 20}),
             html.Div(style={'display': 'flex', }, children=[
                 dcc.Markdown(
                     'Clustering Method:', style={'margin-left': 10, 'width': '50%'}),
@@ -279,7 +298,7 @@ app.layout = html.Div(style={'background': 'linear-gradient(to bottom, blue, #00
 
 
 
-            html.Button(children='Start Now', id='startAutoLabel', style={
+            html.Button(children='Start Clustering', id='startAutoLabel', style={
                 'width': '100%', 'fontSize': 20})
 
 
@@ -290,12 +309,12 @@ app.layout = html.Div(style={'background': 'linear-gradient(to bottom, blue, #00
                  children=[
             html.Div(style={'overflow': 'scroll', 'border-radius': '10px', 'width': '100%', 'height': '47%', 'background-color': 'white'},
                      children=[
-                         dcc.Markdown('Stats', style={
+                         dcc.Markdown('Statistics', style={
                              'fontSize': 26, 'fontWeight': 'bold', 'textAlign': 'center', }),
                 stat1, stat2, stat3,
                 # dcc.Markdown(
                 #     'Shape clicked', id='shape-clicked'),
-                dcc.Markdown('Points Output:', id='points-output', style={"display": "block"}),]
+                dcc.Markdown('Points Output:', id='points-output', style={'margin-left': 10, 'fontSize': 20}),]
             ),
             html.Div(
                 style={'border-radius': '10px', 'width': '100%', 'height': '6%', }),
@@ -307,7 +326,7 @@ app.layout = html.Div(style={'background': 'linear-gradient(to bottom, blue, #00
                          children=[
                     dcc.Markdown('Export File to CSV', style={
                          'fontSize': 26, 'fontWeight': 'bold', 'textAlign': 'center', }),
-                    html.Div(style={'display': 'flex', 'width': '100%', }, children=[
+                    html.Div(style={'display': 'flex', 'width': '100%', 'justify-content': 'space-evenly'}, children=[
                         # dcc.Markdown('File Name:', style={
                         # }),
                         exportName,
@@ -318,10 +337,8 @@ app.layout = html.Div(style={'background': 'linear-gradient(to bottom, blue, #00
                         id="downloadData"),
                     dcc.Upload(
                         id='upload-data',
-                        children=html.Div([
-                            'Drag and Drop or ',
-                            html.A('Select Files')
-                        ]),
+                        children='Click to upload data',
+
                         style={
                             'width': '100%',
                             'height': '60px',
@@ -454,13 +471,13 @@ def update_output(contents):
 
     Output(sensorDropdown, 'style'),
     Output('startAutoLabel', 'n_clicks'),
-    Output('clusterDropdown', 'options'),
-    Output('clusterDropdown', 'value'),
-    Output('ClusterDropdownContainer', 'style'),
+    # Output('clusterDropdown', 'options'),
+    # Output('clusterDropdown', 'value'),
+    # Output('ClusterDropdownContainer', 'style'),
     Output('ClusterColourContainer', 'style'),
-    Output(xAxis_dropdown_3D, 'style'),
-    Output(yAxis_dropdown_3D, 'style'),
-    Output(zAxis_dropdown_3D, 'style'),
+    Output('xAxisDropdownContainer', 'style'),
+    Output('yAxisDropdownContainer', 'style'),
+    Output('zAxisDropdownContainer', 'style'),
     Input(sensorDropdown, 'value'),
     State(labelDropdown, 'value'),
     Input('switchView', 'n_clicks'),
@@ -477,8 +494,8 @@ def update_output(contents):
     Input(yAxis_dropdown_3D, 'value'),
     Input(zAxis_dropdown_3D, 'value'),
     Input('startAutoLabel', 'n_clicks'),
-    Input('clusterDropdown', 'options'),
-    Input('clusterDropdown', 'value'),
+    # Input('clusterDropdown', 'options'),
+    # Input('clusterDropdown', 'value'),
 
     Input('colorNow', 'n_clicks'),
 
@@ -496,7 +513,7 @@ def update_output(contents):
     prevent_initial_call=True,
 
 )
-def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButtonClicks, removeLabelClick, findPrevClicked, findNextClicked, faultFinder, clickData, xAxis_dropdown_3D, yAxis_dropdown_3D, zAxis_dropdown_3D, newAutoLabel, clusterDropdownOptions, clusterDropdownValue, colorNow, sensorChecklist, clusterMethod, reductionMethod, relayoutData, K, reducedSize, eps, minVal, alert2div, alert2):
+def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButtonClicks, removeLabelClick, findPrevClicked, findNextClicked, faultFinder, clickData, xAxis_dropdown_3D, yAxis_dropdown_3D, zAxis_dropdown_3D, newAutoLabel,  colorNow, sensorChecklist, clusterMethod, reductionMethod, relayoutData, K, reducedSize, eps, minVal, alert2div, alert2):
 
     global shapes
     global colours
@@ -889,11 +906,12 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
 
         fig = {'data': selectData, 'layout': layout, }
 
-        sensorDropdownStyle = {'display': 'block'}
+        sensorDropdownStyle = {'display': 'block',
+                               'fontSize': 20, 'margin': 10}
 
     if (switchViewButtonClicks % 3 == 1):
-        xAxis_dropdown_3D_style = {"display": "block"}
-        yAxis_dropdown_3D_style = {"display": "block"}
+        xAxis_dropdown_3D_style = {"display": "flex", }
+        yAxis_dropdown_3D_style = {"display": "flex"}
 
         sensorDropdownStyle = {'display': 'none'}
 
@@ -1022,9 +1040,9 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
 
     if (switchViewButtonClicks % 3 == 2):
         #  3D SCATTER PLOT
-        xAxis_dropdown_3D_style = {"display": "block"}
-        yAxis_dropdown_3D_style = {"display": "block"}
-        zAxis_dropdown_3D_style = {"display": "block"}
+        xAxis_dropdown_3D_style = {"display": "flex", }
+        yAxis_dropdown_3D_style = {"display": "flex"}
+        zAxis_dropdown_3D_style = {"display": "flex"}
 
         ClusterDropdownContainer = {
             "display": "block", 'flex': 0.5}
@@ -1206,12 +1224,15 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
 
     labels = data['labels'].values.tolist()
     n = labels.count(0)
-    stat1 = 'Unlabelle Data: ' + str(n)
-    stat2 = 'Labelled Data: ' + str(len(data['labels']) - n)
+    stat1 = 'Number of unlabelled data points: ' + str(n)
+    stat2 = 'Number of labelled data points: ' + str(len(data['labels']) - n)
     n = len(set(labels))
-    stat3 = 'No. Labels Placed: ', int(len(set(labels)))
+    if 0 in set(labels):
+        stat3 = 'Number of labels Placed: ', int(len(set(labels)))-1
+    else:
+        stat3 = 'Number of labels placed: ', int(len(set(labels)))
 
-    return fig, labelButtonTitle, 0, 0, 0, stat1, stat2, stat3, alert2div,  alert2, sensorDropdownStyle, 0, clusterDropdownOptions, clusterDropdownValue, ClusterDropdownContainer, ClusterColourContainer, xAxis_dropdown_3D_style, yAxis_dropdown_3D_style, zAxis_dropdown_3D_style
+    return fig, labelButtonTitle, 0, 0, 0, stat1, stat2, stat3, alert2div,  alert2, sensorDropdownStyle, 0, ClusterColourContainer, xAxis_dropdown_3D_style, yAxis_dropdown_3D_style, zAxis_dropdown_3D_style
 
 
 @app.callback(
@@ -1415,7 +1436,7 @@ def display_coordinates(click_data, switchViewClicks):
 
             t = point['x']
 
-            return f'Time = {t}'
+            return f'Clicked point time co-ordinate: {t}'
 
         else:
             return 'Click on a point to display its coordinates',
