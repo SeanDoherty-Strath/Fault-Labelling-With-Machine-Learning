@@ -38,7 +38,7 @@ FaultFreeData = pd.DataFrame(data)
 #   - Fault 1 for 480 samples
 
 
-operatingScenario = 3
+operatingScenario = 1
 
 if operatingScenario == 1:
 
@@ -51,7 +51,7 @@ if operatingScenario == 1:
     newDF = newDF._append(FaultyData.iloc[1520:2000], ignore_index=True)
 
     newDF = newDF.drop(data.columns[[0, 1, 2]], axis=1)  # Remove extra columns
-    newDF = newDF.rename(columns={'Unnamed: 0': 'Time'})  # Rename First Column
+    # newDF = newDF.rename(columns={'Unnamed: 0': 'Time'})  # Rename First Column
 
     print(newDF.shape)
 

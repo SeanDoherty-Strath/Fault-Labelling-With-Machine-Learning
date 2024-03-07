@@ -114,7 +114,7 @@ def performAutoEncoding(data):
     decoder = layers.Dense(hidden_layer_dimension, activation='relu')(encoder)
 
     decoder = layers.Dense(input_output_dimension,
-                           activation='sigmoid')(decoder)
+                           activation='linear')(decoder)
 
     # AUTOENCODER
     autoencoder = keras.Model(inputs=input_layer, outputs=decoder)
@@ -123,13 +123,16 @@ def performAutoEncoding(data):
     autoencoder.compile(optimizer='adam', loss='mse')
 
     # Record losses and epochs during training
-    num_epochs = 50
+    num_epochs = 100
     epochs = []
     losses = []
 
     #  prepare  input data.
-    xTrain = data.iloc[:16000, :]  # first 4/5 for training
-    xTest = data.iloc[16000:, :]  # final 1/5  for testing
+    # xTrain = data.iloc[:16000, :]  # first 4/5 for training
+    # xTest = data.iloc[16000:, :]  # final 1/5  for testing
+    data2 = data.iloc[:, :]
+    xTrain = data2.sample(frac=0.8, random_state=42)
+    xTest = data2.drop(xTrain.index)
 
     losses = []
     epochs = []

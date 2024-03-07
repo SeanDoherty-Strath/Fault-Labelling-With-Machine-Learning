@@ -14,6 +14,7 @@ import pandas as pd
 from dash.exceptions import PreventUpdate
 import io
 import base64  # Import base64 module
+import time
 
 # Internal Libraries
 from Components import mainGraph, xAxis_dropdown_3D, yAxis_dropdown_3D, zAxis_dropdown_3D, faultFinder, xAxisText, yAxisText, zAxisText, sensorText, sensorDropdown, sensorHeader, labelDropdown, stat3, stat1, stat2, exportName, exportConfirm, AI_header, clusterMethod, reductionMethod
@@ -24,6 +25,9 @@ from AutoLabellingFunctions import performKMeans, performPCA, performDBSCAN, per
 data = pd.read_csv("FaultLabeller/Data/UpdatedData.csv")
 data = data.drop(data.columns[[1, 2, 3]], axis=1)  # Remove extra columns
 data = data.rename(columns={'Unnamed: 0': 'Time'})  # Rename First Column
+print(data.shape)
+data = data.iloc[:20000, :]
+print(data.shape)
 
 # 0 for non label, -1 for no fault, 2 for fault 1, 2 for fault 3 etc
 data['labels'] = [0]*data.shape[0]
@@ -447,6 +451,8 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
     global x_0
     global x_1
     global currentPoint
+
+    start_time = time.time()
 
     # Set Buttons to 0
     if (newAutoLabel == None):
@@ -995,6 +1001,10 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
         stat3 = 'Number of labels Placed: ', int(len(set(labels)))-1
     else:
         stat3 = 'Number of labels placed: ', int(len(set(labels)))
+
+    end_time = time.time()
+    elapsed_time = end_time - start_time
+    print("Elapsed time:", elapsed_time, "seconds")
 
     return fig, labelButtonTitle, 0, 0, 0, stat1, stat2, stat3, alert2div,  alert2, sensorDropdownStyle, 0, ClusterColourContainer, xAxis_dropdown_3D_style, yAxis_dropdown_3D_style, zAxis_dropdown_3D_style
 
