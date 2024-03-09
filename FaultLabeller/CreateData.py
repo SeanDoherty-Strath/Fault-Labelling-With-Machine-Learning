@@ -44,17 +44,18 @@ if operatingScenario == 1:
 
     # No fault, 24 hours
     newDF = FaultFreeData.iloc[:480, :]
-    correctLabels = pd.DataFrame([0]*480)
+    # correctLabels = pd.DataFrame([0]*480)
     newDF = newDF._append(FaultyData.iloc[20:500], ignore_index=True)
-    correctLabels = correctLabels._append([1]*480)
+
     newDF = newDF._append(FaultFreeData.iloc[500:980], ignore_index=True)
-    correctLabels = correctLabels._append([0]*480)
+    # correctLabels = correctLabels._append([0]*480)
     newDF = newDF._append(FaultyData.iloc[520:1000], ignore_index=True)
-    correctLabels = correctLabels._append([2]*480)
+    # correctLabels = correctLabels._append([2]*480)
     newDF = newDF._append(FaultFreeData.iloc[1000:1480], ignore_index=True)
-    correctLabels = correctLabels._append(10*480)
-    newDF = newDF._append(FaultyData.iloc[1520:2000], ignore_index=True)
-    correctLabels = correctLabels._append([3]*480)
+    # correctLabels = correctLabels._append(10*480)
+    newDF = newDF._append(FaultyData.iloc[2020:2500], ignore_index=True)
+
+    # correctLabels = correctLabels._append([3]*480)
 
     # correctLabels = [[0]*480, [1]*480, [0]*480, [2]*480, [0]*480, [3]*480]
     # correct_labels = pd.DataFrame(correctLabels)
@@ -62,12 +63,12 @@ if operatingScenario == 1:
     # newDF = newDF.rename(columns={'Unnamed: 0': 'Time'})  # Rename First Column
 
     print(newDF.shape)
-    print(correctLabels.shape)
+    # print(correctLabels.shape)
 
     filepath = Path('FaultLabeller/Data/OperatingScenario1.csv')
     newDF.to_csv(filepath)
-    filepath = Path('FaultLabeller/Data/CorrectLabelsScenario1.csv')
-    correctLabels.to_csv(filepath)
+    # filepath = Path('FaultLabeller/Data/CorrectLabelsScenario1.csv')
+    # correctLabels.to_csv(filepath)
 
 if operatingScenario == 2:
 
