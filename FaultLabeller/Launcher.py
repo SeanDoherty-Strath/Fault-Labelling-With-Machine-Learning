@@ -25,9 +25,6 @@ from AutoLabellingFunctions import performKMeans, performPCA, performDBSCAN, per
 data = pd.read_csv("FaultLabeller/Data/UpdatedData.csv")
 data = data.drop(data.columns[[1, 2, 3]], axis=1)  # Remove extra columns
 data = data.rename(columns={'Unnamed: 0': 'Time'})  # Rename First Column
-print(data.shape)
-data = data.iloc[:20000, :]
-print(data.shape)
 
 # 0 for non label, -1 for no fault, 2 for fault 1, 2 for fault 3 etc
 data['labels'] = [0]*data.shape[0]
@@ -348,7 +345,10 @@ def exportCSV(exportClicked, fileName):
         raise PreventUpdate
 
     csv_filename = fileName + '.csv'
-    data.to_csv(csv_filename, index=False)
+
+    exportData = data.drop(columns=['clusterLabels'])
+
+    exportData.to_csv(csv_filename, index=False)
     return dcc.send_file(csv_filename)
 
 #  This function uploads data to the dashboard
@@ -374,21 +374,24 @@ def update_output(contents):
     global x_1
 
     if contents is not None:
-        print('contents', contents)
+
         content_type, content_string = contents.split(',')
         decoded = io.StringIO(base64.b64decode(content_string).decode('utf-8'))
         data = pd.read_csv(decoded)
         data['labels'] = data['labels'] = [0]*data.shape[0]
         data['clusterLabels'] = [0]*data.shape[0]
-        sensors = data.columns[1:len(data.columns)-2]
+        # sensors = data.columns[1:len(data.columns)-2]
+
+        data = data.drop(columns=['faultNumber'])
 
         x_0 = 0
         x_1 = data.shape[0]
+        print(x_1)
 
         # shapes = []
         layout = go.Layout(xaxis=dict(range=[x_0, x_1]))
 
-        return 'Success', sensors, [data.columns[1]], sensors, {'layout': layout}, data.columns[1], data.columns, data.columns[2], data.columns, data.columns[3], data.columns
+        return 'Success', data.columns, [data.columns[1]], data.columns, {'layout': layout}, data.columns[1], data.columns, data.columns[2], data.columns, data.columns[3], data.columns
     else:
         raise PreventUpdate
 
@@ -480,9 +483,6 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
     zAxis_dropdown_3D_style = {"display": "none"}
     alert2div['display'] = 'none'
 
-    if (removeLabelClick == 1):
-        data.loc[:, 'labels'] = 0
-
     # Take note of initial x0 and x1 values
     if relayoutData and 'xaxis.range[0]' in relayoutData.keys():
         x_0 = relayoutData.get('xaxis.range[0]')
@@ -510,11 +510,15 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
             dragMode = 'pan'
 
             if relayoutData is not None and 'selections' in relayoutData.keys():
+                print('came to relayout data')
 
                 x0 = relayoutData['selections'][0]['x0']
                 x1 = relayoutData['selections'][0]['x1']
                 x0 = round(x0)
                 x1 = round(x1)
+
+                print(x0)
+                print(x1)
 
                 if (x0 > x1):
                     temp = x0
@@ -679,6 +683,10 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
                 x_0 = 0
                 x_1 = data.shape[0]
 
+        if (removeLabelClick == 1):
+            data['labels'] = [0]*data.shape[0]
+            data['clusterLabels'] = [0]*data.shape[0]
+
         # Go through labels and shown all the shapes
         shapes = []
         x0 = 0
@@ -689,7 +697,6 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
             if data['labels'][i] != data['labels'][i-1]:
 
                 x1 = i
-                print(x0)
                 shapes.append({
                     'type': 'rect',
                     'x0': x0,
@@ -870,6 +877,9 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
                                                                  xAxis_dropdown_3D], text=data.loc[:, 'clusterLabels'], mode='markers', marker={'color': [greyColours[val][0] for val in data['clusterLabels']], })]
 
         else:
+            if (removeLabelClick == 1):
+                data['labels'] = [0]*data.shape[0]
+                data['clusterLabels'] = [0]*data.shape[0]
             selectData = [go.Scatter(
                 y=data.loc[:, yAxis_dropdown_3D], x=data.loc[:,
                                                              xAxis_dropdown_3D], text=data.loc[:, 'labels'], mode='markers', marker={'color': [colours[val][0] for val in data['labels']], })]
@@ -970,6 +980,9 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
                 },)]
 
         else:
+            if (removeLabelClick == 1):
+                data['labels'] = [0]*data.shape[0]
+                data['clusterLabels'] = [0]*data.shape[0]
             selectData = [go.Scatter3d(y=data.loc[:, yAxis_dropdown_3D], z=data.loc[:,
                                                                                     zAxis_dropdown_3D], x=data.loc[:, xAxis_dropdown_3D], mode='markers',
                                        marker={
@@ -1090,7 +1103,6 @@ def colorLabels(colorNow, area0, area1, area2, area3, area4, area5, area6, area7
         raise PreventUpdate
     else:
 
-        print(alert2div['display'])
         global x_0
         global x_1
 
@@ -1320,7 +1332,7 @@ def autoLabelStyles(clusterMethod, reductionMethod, switchView):
 
 )
 def DBSCAN_parameterSelection(clusterMethod, sensorChecklist, reducedSize, reductionMethod):
-    print(sensorChecklist)
+
     if clusterMethod == 'DBSCAN' and sensorChecklist != []:
         df = data.loc[:, sensorChecklist]
         if reductionMethod == 'PCA':
