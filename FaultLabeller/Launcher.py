@@ -689,7 +689,7 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
             if data['labels'][i] != data['labels'][i-1]:
 
                 x1 = i
-
+                print(x0)
                 shapes.append({
                     'type': 'rect',
                     'x0': x0,
