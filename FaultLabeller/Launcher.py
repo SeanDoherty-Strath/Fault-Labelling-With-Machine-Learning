@@ -50,11 +50,11 @@ greyColours = [['#000000'], ['#E0E0E0'], ['#606060'], ['#404040'], [
 app = dash.Dash(__name__)
 
 # Define the layout
-app.layout = html.Div(style={'background': 'linear-gradient(to bottom, blue, #000000)', 'height': '100vh', 'display': 'flex', 'justify-content': 'center', 'flex-direction': 'column', 'align-items': 'center'}, children=[
+app.layout = html.Div(style={'background': 'linear-gradient(to bottom, blue, #000000)', 'height': '100vh', 'display': 'flex', 'justify-content': 'center', 'flex-direction': 'column', 'align-items': 'center', 'overflow':'auto'}, children=[
 
     # MODALS
     # Alert 1
-    html.Div(id='alert2div', style={'display': 'none', 'backgroundColor': 'white', 'border': '5px solid black', 'position': 'absolute', 'top': 10, 'margin': 20, 'align-items': 'center', 'width': '90%', 'height': 40, 'flex-direction': 'row', },
+    html.Div(id='alert2div', style={'display': 'none', 'backgroundColor': 'white', 'posotion':'absolute', 'border': '5px solid black',  'margin': 10, 'align-items': 'center', 'width': '90%', 'height': 30, 'flex-direction': 'row', },
              children=[
         dcc.Markdown('Warning: ', style={
                      'fontSize': 24, 'fontWeight': 'bold', 'padding': 10}),
@@ -63,7 +63,7 @@ app.layout = html.Div(style={'background': 'linear-gradient(to bottom, blue, #00
     ]
     ),
     # Alert 2
-    html.Div(id='alert1div', style={'display': 'none', 'position': 'absolute', 'top': 60, 'backgroundColor': 'white', 'border': '5px solid black', 'margin': 20, 'align-items': 'center', 'width': '90%', 'height': 40, 'flex-direction': 'row', },
+    html.Div(id='alert1div', style={'display': 'none',  'posotion':'absolute','backgroundColor': 'white', 'border': '5px solid black', 'margin': 10, 'align-items': 'center', 'width': '90%', 'height': 30, 'flex-direction': 'row', },
              children=[
         dcc.Markdown('Click Data: ', style={
             'fontSize': 24, 'fontWeight': 'bold', 'padding': 10}),
@@ -73,13 +73,12 @@ app.layout = html.Div(style={'background': 'linear-gradient(to bottom, blue, #00
     ),
 
     # TOP BOX
-    html.Div(style={'width': '90%', 'height': '50%',  'background-color': 'white', },
+    html.Div(style={'top': 20, 'overflow': 'auto', 'width': '90%', 'height': '50%',  'background-color': 'white', },
              children=[
         html.Button('Switch View', id='switchView',
-                    style={'fontSize': 20, 'margin': 20}),
-        html.Button('View Time Representation', id='switchRepresentation', style={
-                    'fontSize': 20, 'margin': 20}),
-        html.Div(style={'flex-direction': 'row', 'display': 'flex', 'width': '100%', 'height': '100%', 'overflow': 'hidden'},
+                    style={'fontSize': 20, 'margin': 20, 'position':'absolute', 'left': 0, 'top': 0}),
+        html.Button('View Time Representation', id='switchRepresentation', style={'fontSize': 20, 'margin': 20, 'position':'absolute', 'left': 130, 'top': 0}),
+        html.Div(style={'flex-direction': 'row', 'display': 'flex', 'width': '100%', 'height': '100%', },
                  children=[
             html.Div(id='ClusterColourContainer', style={"display": "none", 'flex': '1'},
                      children=[
@@ -110,7 +109,7 @@ app.layout = html.Div(style={'background': 'linear-gradient(to bottom, blue, #00
     ]),
 
     # BOTTOM BOXES
-    html.Div(style={'width': '90%', 'height': '35%',  'display': 'flex', 'justify-content': 'space-between', 'align-items': 'center', 'margin-top': '80px', 'margin-bottom': '80px'},
+    html.Div(style={'margin-top': 100, 'margin-top': 20, 'width': '90%', 'height': '35%',  'display': 'flex', 'justify-content': 'space-between', 'align-items': 'center', },
              children=[
         # Box 1
         html.Div(style={'overflow': 'scroll', 'width': '24%', 'height': '100%',  'background-color': 'white'},
@@ -130,7 +129,7 @@ app.layout = html.Div(style={'background': 'linear-gradient(to bottom, blue, #00
 
         html.Div(style={'width': '24%', 'height': '100%', }, children=[
             #  Box 2
-            html.Div(style={'width': '100%', 'height': '47%', 'background-color': 'white', },
+            html.Div(style={'overflow': 'auto', 'width': '100%', 'height': '47%', 'background-color': 'white', },
                      children=[
                 html.Div(style={'display': 'flex', 'flex-direction': 'column', 'justify-content': 'center', 'text-align': 'left',  'align-items': 'center'},
                          children=[
@@ -147,7 +146,7 @@ app.layout = html.Div(style={'background': 'linear-gradient(to bottom, blue, #00
                 style={'width': '100%', 'height': '6%'}),
 
             #  Box 3
-            html.Div(style={'width': '100%', 'height': '47%', 'background-color': 'white'},
+            html.Div(style={'overflow': 'auto', 'width': '100%', 'height': '47%', 'background-color': 'white'},
                      children=[
                 html.Div(style={'display': 'flex', 'flex-direction': 'column', 'justify-content': 'center', 'text-align': 'left',  'align-items': 'center'},
                          children=[
@@ -170,7 +169,7 @@ app.layout = html.Div(style={'background': 'linear-gradient(to bottom, blue, #00
             ]),]),
 
         # Box 4
-        html.Div(style={'overflow': 'scroll',   'width': '24%', 'height': '100%', 'background-color': 'white'},
+        html.Div(style={'overflow': 'auto',   'width': '24%', 'height': '100%', 'background-color': 'white'},
                  children=[
             AI_header,
             dcc.Markdown(
@@ -272,7 +271,7 @@ app.layout = html.Div(style={'background': 'linear-gradient(to bottom, blue, #00
                 style={'width': '100%', 'height': '6%', }),
 
             # Box6
-            html.Div(style={'width': '100%', 'height': '47%', 'background-color': 'white', 'display': 'flex', 'justify-content': 'center', },
+            html.Div(style={'overflow': 'auto', 'width': '100%', 'height': '47%', 'background-color': 'white', 'display': 'flex', 'justify-content': 'center', },
                      children=[
                 html.Div(style={'display': 'flex', 'flex-direction': 'column', 'justify-content': 'center', 'align-items': 'center', 'width': '100%', },
                          children=[
@@ -538,7 +537,7 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
             labelButtonTitle = "Confirm Label"
 
         if (findNextClicked == 1):
-
+            target =  0
             if (faultFinder == 'Unlabelled Data Point'):
                 target = 0
             elif (faultFinder == 'No Fault'):
