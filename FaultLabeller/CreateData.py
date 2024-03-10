@@ -53,7 +53,8 @@ if operatingScenario == 1:
     # correctLabels = correctLabels._append([2]*480)
     newDF = newDF._append(FaultFreeData.iloc[1000:1480], ignore_index=True)
     # correctLabels = correctLabels._append(10*480)
-    newDF = newDF._append(FaultyData.iloc[2020:2500], ignore_index=True)
+    newDF = newDF._append(
+        FaultyData.iloc[5*480+20:5*480+500], ignore_index=True)
 
     # correctLabels = correctLabels._append([3]*480)
 
@@ -106,4 +107,14 @@ if operatingScenario == 3:
     print(newDF.shape)
 
     filepath = Path('FaultLabeller/Data/OperatingScenario3.csv')
+    newDF.to_csv(filepath)
+
+if operatingScenario == 4:
+    newDF = FaultFreeData.iloc[:480, :]
+    for i in range(0, 20):
+        newDF = newDF._append(
+            FaultyData.iloc[i*480+20:i*480+500])
+    print(newDF.shape)
+    # expecting 10080
+    filepath = Path('FaultLabeller/Data/AllFaults.csv')
     newDF.to_csv(filepath)

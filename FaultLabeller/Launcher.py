@@ -50,11 +50,11 @@ greyColours = [['#000000'], ['#E0E0E0'], ['#606060'], ['#404040'], [
 app = dash.Dash(__name__)
 
 # Define the layout
-app.layout = html.Div(style={'background': 'linear-gradient(to bottom, blue, #000000)', 'height': '100vh', 'display': 'flex', 'justify-content': 'center', 'flex-direction': 'column', 'align-items': 'center', 'overflow':'auto'}, children=[
+app.layout = html.Div(style={'background': 'linear-gradient(to bottom, blue, #000000)', 'height': '100vh', 'display': 'flex', 'justify-content': 'center', 'flex-direction': 'column', 'align-items': 'center', 'overflow': 'auto'}, children=[
 
     # MODALS
     # Alert 1
-    html.Div(id='alert2div', style={'display': 'none', 'backgroundColor': 'white', 'posotion':'absolute', 'border': '5px solid black',  'margin': 10, 'align-items': 'center', 'width': '90%', 'height': 30, 'flex-direction': 'row', },
+    html.Div(id='alert2div', style={'display': 'none', 'backgroundColor': 'white', 'posotion': 'absolute', 'border': '5px solid black',  'margin': 10, 'align-items': 'center', 'width': '90%', 'height': 30, 'flex-direction': 'row', },
              children=[
         dcc.Markdown('Warning: ', style={
                      'fontSize': 24, 'fontWeight': 'bold', 'padding': 10}),
@@ -63,7 +63,7 @@ app.layout = html.Div(style={'background': 'linear-gradient(to bottom, blue, #00
     ]
     ),
     # Alert 2
-    html.Div(id='alert1div', style={'display': 'none',  'posotion':'absolute','backgroundColor': 'white', 'border': '5px solid black', 'margin': 10, 'align-items': 'center', 'width': '90%', 'height': 30, 'flex-direction': 'row', },
+    html.Div(id='alert1div', style={'display': 'none',  'posotion': 'absolute', 'backgroundColor': 'white', 'border': '5px solid black', 'margin': 10, 'align-items': 'center', 'width': '90%', 'height': 30, 'flex-direction': 'row', },
              children=[
         dcc.Markdown('Click Data: ', style={
             'fontSize': 24, 'fontWeight': 'bold', 'padding': 10}),
@@ -76,8 +76,9 @@ app.layout = html.Div(style={'background': 'linear-gradient(to bottom, blue, #00
     html.Div(style={'top': 20, 'overflow': 'auto', 'width': '90%', 'height': '50%',  'background-color': 'white', },
              children=[
         html.Button('Switch View', id='switchView',
-                    style={'fontSize': 20, 'margin': 20, 'position':'absolute', 'left': 0, 'top': 0}),
-        html.Button('View Time Representation', id='switchRepresentation', style={'fontSize': 20, 'margin': 20, 'position':'absolute', 'left': 130, 'top': 0}),
+                    style={'fontSize': 20, 'margin': 20, 'position': 'absolute', 'left': 0, 'top': 0}),
+        html.Button('View Time Representation', id='switchRepresentation', style={
+                    'fontSize': 20, 'margin': 20, 'position': 'absolute', 'left': 130, 'top': 0}),
         html.Div(style={'flex-direction': 'row', 'display': 'flex', 'width': '100%', 'height': '100%', },
                  children=[
             html.Div(id='ClusterColourContainer', style={"display": "none", 'flex': '1'},
@@ -377,11 +378,12 @@ def update_output(contents):
         content_type, content_string = contents.split(',')
         decoded = io.StringIO(base64.b64decode(content_string).decode('utf-8'))
         data = pd.read_csv(decoded)
+        sensors = data.columns[1:len(data.columns)]
         data['labels'] = data['labels'] = [0]*data.shape[0]
         data['clusterLabels'] = [0]*data.shape[0]
-        # sensors = data.columns[1:len(data.columns)-2]
+        # sensors = data.columns[1:len(data.columns)]
 
-        data = data.drop(columns=['faultNumber'])
+        # data = data.drop(columns=['faultNumber'])
 
         x_0 = 0
         x_1 = data.shape[0]
@@ -390,7 +392,7 @@ def update_output(contents):
         # shapes = []
         layout = go.Layout(xaxis=dict(range=[x_0, x_1]))
 
-        return 'Success', data.columns, [data.columns[1]], data.columns, {'layout': layout}, data.columns[1], data.columns, data.columns[2], data.columns, data.columns[3], data.columns
+        return 'Success', sensors, [sensors[0]], sensors, {'layout': layout}, sensors[0], sensors, sensors[1], sensors, sensors[2], sensors
     else:
         raise PreventUpdate
 
@@ -537,7 +539,7 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
             labelButtonTitle = "Confirm Label"
 
         if (findNextClicked == 1):
-            target =  0
+            target = 0
             if (faultFinder == 'Unlabelled Data Point'):
                 target = 0
             elif (faultFinder == 'No Fault'):
@@ -1134,6 +1136,7 @@ def colorLabels(colorNow, area0, area1, area2, area3, area4, area5, area6, area7
         data['clusterLabels'] = [0]*data.shape[0]
         ClusterColourContainer = {'display': 'none'}
 
+        # calculateAccuray(list(data))
         return 0, ClusterColourContainer, alert2div, alertMessage
 
 # This function displays the user-clicked cooridnate on the screen

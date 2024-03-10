@@ -33,11 +33,13 @@ def performPCA(df, n):
 
 
 def performKMeans(df, k):
+    scaler = StandardScaler()
+    data = scaler.fit_transform(df)
 
     kmeans = KMeans(n_clusters=k, n_init="auto")
 
     # Fit the model to the data
-    kmeans.fit(df)
+    kmeans.fit(data)
 
     # Get the cluster labels and centroids
     labelArray = kmeans.labels_
@@ -166,25 +168,3 @@ def performAutoEncoding(data):
     bottleneck_df = pd.DataFrame(
         data=latentSpace)
     return bottleneck_df
-
-
-def calculateAccuray(list1, list2):
-    if len(list1) != len(list2):
-        return "Error: Lists must have the same length"
-
-    total_elements = len(list1)
-    agreed_elements = 0
-
-    for item1, item2 in zip(list1, list2):
-        if item1 == item2:
-            agreed_elements += 1
-
-    accuracy_percentage = (agreed_elements / total_elements) * 100
-    return accuracy_percentage
-
-# # Example usage:
-# list1 = [1, 2, 3, 4, 5]
-# list2 = [1, 2, 3, 5, 5]
-
-# accuracy = calculate_accuracy(list1, list2)
-# print("Accuracy:", accuracy, "%")
