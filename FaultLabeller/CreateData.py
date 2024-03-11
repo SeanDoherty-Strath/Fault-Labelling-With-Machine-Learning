@@ -38,7 +38,7 @@ FaultFreeData = pd.DataFrame(data)
 #   - Fault 1 for 480 samples
 
 
-operatingScenario = 1
+operatingScenario = 6
 
 if operatingScenario == 1:
 
@@ -117,4 +117,39 @@ if operatingScenario == 4:
     print(newDF.shape)
     # expecting 10080
     filepath = Path('FaultLabeller/Data/AllFaults.csv')
+    newDF.to_csv(filepath)
+if operatingScenario == 5:
+    # newDF = [FaultFreeData.iloc[:480, :]]
+    newDF = pd.DataFrame()
+    for i in range(0, 10):
+        # data set repeats every 500
+        newDF = newDF._append(FaultFreeData.iloc[500*i:480+500*i, :])
+        # data set repeats every
+        newDF = newDF._append(FaultyData.iloc[i*10000+20:i*10000+500])
+
+    newDF = newDF.drop(data.columns[[0, 1, 2]], axis=1)  # Remove extra columns
+    print(newDF.shape)
+    print(newDF)
+    # expecting 9600
+    filepath = Path('FaultLabeller/Data/OperatingScenario5.csv')
+    newDF.to_csv(filepath)
+
+if operatingScenario == 6:
+    # newDF = [FaultFreeData.iloc[:480, :]]
+    newDF = pd.DataFrame()
+    for i in range(0, 10):
+        # data set repeats every 500
+        newDF = newDF._append(FaultFreeData.iloc[500*i:480+500*i, :])
+        # data set repeats every 10000
+        newDF = newDF._append(
+            FaultyData.iloc[i*10000+20:i*10000+500])  # Fault 2
+        newDF = newDF._append(
+            FaultyData.iloc[i*10000+20+500:i*10000+500+500])  # Fault 2
+        newDF = newDF._append(
+            FaultyData.iloc[i*10000+20+5*500:i*10000+500+500*5])  # Fault 3
+    newDF = newDF.drop(data.columns[[0, 1, 2]], axis=1)  # Remove extra columns
+    print(newDF.shape)
+    print(newDF)
+    # expecting 19200
+    filepath = Path('FaultLabeller/Data/OperatingScenario6.csv')
     newDF.to_csv(filepath)
