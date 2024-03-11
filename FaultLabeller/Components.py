@@ -68,7 +68,7 @@ labelDropdown = dcc.Dropdown(value=1, options=[
 AI_header = dcc.Markdown('Automatically Label Faults', style={
                          'fontSize': 26, 'fontWeight': 'bold', 'textAlign': 'center', })
 clusterMethod = dcc.Dropdown(
-    options=['K Means', 'DBSCAN'], value='K Means', style={'width': '100%'})
+    options=['K Means', 'DBSCAN', 'Neural Network (Supervised)'], value='K Means', style={'width': '100%'})
 reductionMethod = dcc.Dropdown(
     options=["PCA", "Auto-encoding", "None"], value='None', style={'width': '100%'})
 
