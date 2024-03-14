@@ -24,9 +24,10 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import keras
 import tensorflow as tf
+import dash_bootstrap_components as dbc
 
 # Internal Libraries
-from Components import mainGraph, xAxis_dropdown_3D, yAxis_dropdown_3D, zAxis_dropdown_3D, faultFinder, xAxisText, yAxisText, zAxisText, sensorText, sensorDropdown, sensorHeader, labelDropdown, stat3, stat1, stat2, exportName, exportConfirm, AI_header, clusterMethod, reductionMethod
+from Components import mainGraph, xAxis_dropdown_3D, yAxis_dropdown_3D, zAxis_dropdown_3D, faultFinder, xAxisText, alert1container, alert2container,  yAxisText, zAxisText, sensorText, sensorDropdown, commentModal, sensorHeader, labelDropdown, stat3, stat1, stat2, exportName, exportConfirm, AI_header, clusterMethod, reductionMethod
 from AutoLabellingFunctions import performKMeans, performPCA, performDBSCAN, performAutoEncoding, findKneePoint
 
 # DATA
@@ -35,6 +36,9 @@ from AutoLabellingFunctions import performKMeans, performPCA, performDBSCAN, per
 # data = data.drop(data.columns[[1, 2, 3]], axis=1)  # Remove extra columns
 # data = data.rename(columns={'Unnamed: 0': 'Time'})  # Rename First Column
 data = pd.DataFrame()
+# Create sample data
+comments = pd.DataFrame({})
+
 
 # 0 for non label, -1 for no fault, 2 for fault 1, 2 for fault 3 etc
 # data['labels'] = [0]
@@ -56,51 +60,44 @@ colours = [['grey'], ['green'], ['red'], ['orange'], ['yellow'], ['pink'],
            ['purple'], ['lavender'], ['blue'], ['brown'], ['cyan']]
 
 greyColours = [['#000000'], ['#E0E0E0'], ['#606060'], ['#404040'], [
-    '#A0A0A0'], ['#FFFFFF'], ['#202020'], ['#808080'], ['#C0C0C0'],]
+    '#A0A0A0'], ['#FFFFFF'], ['#202020'], ['#808080'], ['#C0C0C0'], ['grey']]
 
 
 # START APP
 app = dash.Dash(__name__)
 
 # Define the layout
-app.layout = html.Div(style={'background': 'linear-gradient(to bottom, blue, #000000)', 'height': '100vh', 'display': 'flex', 'justify-content': 'center', 'flex-direction': 'column', 'align-items': 'center', 'overflow': 'auto'}, children=[
-    # TItle
-    dcc.Markdown(id='upload-data-text', children='',
-                 style={'color': 'white', 'fontSize': 40,  'padding-bottom': 15, 'position': 'absolute', 'top': 0}),
-    # MODALS
-    # Alert 1
-    html.Div(id='alert2div', style={'display': 'none', 'backgroundColor': 'white', 'posotion': 'absolute', 'border': '5px solid black',  'margin': 10, 'align-items': 'center', 'width': '90%', 'height': 30, 'flex-direction': 'row', },
-             children=[
-        dcc.Markdown('Warning: ', style={
-                     'fontSize': 24, 'fontWeight': 'bold', 'padding': 10}),
-        dcc.Markdown('Message', id='alert2', style={'fontSize': 24}),
-        html.Button('Close', id='closeAlert2', style={'margin-left': 20})
-    ]
-    ),
-    # Alert 2
-    html.Div(id='alert1div', style={'display': 'none',  'posotion': 'absolute', 'backgroundColor': 'white', 'border': '5px solid black', 'margin': 10, 'align-items': 'center', 'width': '90%', 'height': 30, 'flex-direction': 'row', },
-             children=[
+app.layout = html.Div(style={'background': 'linear-gradient(to bottom, blue, #000000)', 'height': '100vh', 'display': 'flex', 'justify-content': 'center', 'flex-direction': 'column', 'align-items': 'center', 'overflow': 'hide'}, children=[
 
-        dcc.Markdown('Click Data: ', style={
-            'fontSize': 24, 'fontWeight': 'bold', 'padding': 10}),
-        dcc.Markdown('Message', id='alert1', style={'fontSize': 24}),
-        html.Button('Close', id='closeAlert1', style={'margin-left': 20})
-    ]
-    ),
+    # Title
+    dcc.Markdown(id='upload-data-text', children='Upload Data to Begin Fault Labelling',
+                 style={'color': 'white', 'fontSize': 30,  'padding-bottom': 15, 'position': 'absolute', 'top': 0}),
+    # MODALS
+    commentModal,
+    # Alert 1
+    alert1container,
+    alert2container,
+
+
+
 
     # TOP BOX
-    html.Div(style={'top': 20, 'overflow': 'auto', 'width': '90%', 'height': '50%',  'background-color': 'white', },
+    html.Div(style={'top': 20, 'overflow': 'auto', 'width': '90%', 'height': '50%',  'background-color': 'white', 'border-radius': '10px',
+                    'box-shadow': '0px 0px 10px 0px rgba(0,0,0,0.75)', },
              children=[
         html.Button('Switch View', id='switchView',
                     style={'fontSize': 20, 'margin': 20, 'position': 'absolute', 'left': 0, 'top': 0}),
         html.Button('View Time Representation', id='switchRepresentation', style={
                     'fontSize': 20, 'margin': 20, 'position': 'absolute', 'left': 130, 'top': 0}),
+        html.Button("Open Comments", id="open-modal",
+                    style={
+                        'fontSize': 20, 'margin': 20, 'position': 'absolute', 'right': 0, 'top': 0}),
         html.Div(style={'flex-direction': 'row', 'display': 'flex', 'width': '100%', 'height': '100%', },
                  children=[
             html.Div(id='ClusterColourContainer', style={"display": "none", 'flex': '1'},
                      children=[
                         dcc.Dropdown(
-                            style={'display': 'none', }, id=f'dropdown-0'),
+                            style={'display': 'none'}, id='dropdown-0'),
                         dcc.Dropdown(
                             style={'display': 'none'}, id='dropdown-1'),
                         dcc.Dropdown(
@@ -129,7 +126,8 @@ app.layout = html.Div(style={'background': 'linear-gradient(to bottom, blue, #00
     html.Div(style={'margin-top': 100, 'margin-top': 20, 'width': '90%', 'height': '35%',  'display': 'flex', 'justify-content': 'space-between', 'align-items': 'center', },
              children=[
         # Box 1
-        html.Div(style={'overflow': 'scroll', 'width': '24%', 'height': '100%',  'background-color': 'white'},
+        html.Div(style={'overflow': 'scroll', 'width': '24%', 'height': '100%',  'background-color': 'white', 'border-radius': '10px',
+                        'box-shadow': '0px 0px 10px 0px rgba(0,0,0,0.75)', },
                  children=[
             sensorHeader,
             sensorText,
@@ -146,7 +144,8 @@ app.layout = html.Div(style={'background': 'linear-gradient(to bottom, blue, #00
 
         html.Div(style={'width': '24%', 'height': '100%', }, children=[
             #  Box 2
-            html.Div(style={'overflow': 'auto', 'width': '100%', 'height': '47%', 'background-color': 'white', },
+            html.Div(style={'overflow': 'auto', 'width': '100%', 'height': '47%', 'background-color': 'white', 'border-radius': '10px',
+                            'box-shadow': '0px 0px 10px 0px rgba(0,0,0,0.75)', },
                      children=[
                 html.Div(style={'display': 'flex', 'flex-direction': 'column', 'justify-content': 'center', 'text-align': 'left',  'align-items': 'center'},
                          children=[
@@ -163,7 +162,8 @@ app.layout = html.Div(style={'background': 'linear-gradient(to bottom, blue, #00
                 style={'width': '100%', 'height': '6%'}),
 
             #  Box 3
-            html.Div(style={'overflow': 'auto', 'width': '100%', 'height': '47%', 'background-color': 'white'},
+            html.Div(style={'overflow': 'auto', 'width': '100%', 'height': '47%', 'background-color': 'white', 'border-radius': '10px',
+                            'box-shadow': '0px 0px 10px 0px rgba(0,0,0,0.75)', },
                      children=[
                 html.Div(style={'display': 'flex', 'flex-direction': 'column', 'justify-content': 'center', 'text-align': 'left',  'align-items': 'center'},
                          children=[
@@ -186,7 +186,8 @@ app.layout = html.Div(style={'background': 'linear-gradient(to bottom, blue, #00
             ]),]),
 
         # Box 4
-        html.Div(style={'overflow': 'auto',   'width': '24%', 'height': '100%', 'background-color': 'white'},
+        html.Div(style={'overflow': 'auto',   'width': '24%', 'height': '100%', 'background-color': 'white', 'border-radius': '10px',
+                        'box-shadow': '0px 0px 10px 0px rgba(0,0,0,0.75)', },
                  children=[
             AI_header,
             dcc.Markdown(
@@ -309,13 +310,13 @@ app.layout = html.Div(style={'background': 'linear-gradient(to bottom, blue, #00
         #    Box 5
         html.Div(style={'width': '24%', 'height': '100%'},
                  children=[
-            html.Div(style={'width': '100%', 'height': '47%', 'background-color': 'white', 'justify-content': 'center', 'overflow': 'auto'},
+            html.Div(style={'width': '100%', 'height': '47%', 'background-color': 'white', 'justify-content': 'center', 'overflow': 'auto', 'border-radius': '10px',
+                            'box-shadow': '0px 0px 10px 0px rgba(0,0,0,0.75)', },
                      children=[
                 dcc.Markdown('Statistics', style={
                     'fontSize': 26, 'fontWeight': 'bold', 'textAlign': 'center', }),
                  stat1, stat2, stat3,
-                 dcc.Markdown(
-                     'Points Output:', id='points-output', style={'fontSize': 20}),
+
 
 
                  ]
@@ -324,7 +325,8 @@ app.layout = html.Div(style={'background': 'linear-gradient(to bottom, blue, #00
                 style={'width': '100%', 'height': '6%', }),
 
             # Box6
-            html.Div(style={'overflow': 'auto', 'width': '100%', 'height': '47%', 'background-color': 'white', 'display': 'flex', 'justify-content': 'center', },
+            html.Div(style={'overflow': 'auto', 'width': '100%', 'height': '47%', 'background-color': 'white', 'display': 'flex', 'justify-content': 'center', 'border-radius': '10px',
+                            'box-shadow': '0px 0px 10px 0px rgba(0,0,0,0.75)', },
                      children=[
                 html.Div(style={'display': 'flex', 'flex-direction': 'column', 'justify-content': 'center', 'align-items': 'center', 'width': '100%', },
                          children=[
@@ -396,7 +398,28 @@ def exportCSV(exportClicked, fileName):
 
     csv_filename = fileName + '.csv'
 
+    # if 'comment' in data.columns and 'commentTime' in data.columns and 'commentMessage' in data.columns:
+    #         comments = comments._append(data.loc[:, 'comment'])
+    #         comments = comments._append(data.loc[:, 'commentTime'])
+    #         comments = comments._append(data.loc[:, 'commentMessage'])
+    #         data.drop(columns=['comment', 'commentTime',
+    #                   'commentMessage'], inplace=True)
+
+    #     if 'Unnamed: 0' in data.columns:
+    #         data = data.rename(columns={'Unnamed: 0': 'Time'})
+
+    #     if 'correctLabels' in data.columns:
+    #         data = data.rename(columns={'correctLabels': 'labels'})
+    #     else:
+    #         data['labels'] = data['labels'] = [0]*data.shape[0]
+
+    #     data['clusterLabels'] = [0]*data.shape[0]
+
     exportData = data.drop(columns=['clusterLabels'])
+    exportData = exportData.rename(columns={'labels': 'correctLabels'})
+    exportData['commentMessage'] = comments.loc[:, 'commentMessage']
+    exportData['commentTime'] = comments.loc[:, 'commentTime']
+    exportData['commentUser'] = comments.loc[:, 'commentUser']
 
     print(exportData)
 
@@ -426,18 +449,40 @@ def update_output(contents, filename):
     global x_0
     global x_1
 
+    # Files are of the form
+
     if contents is not None:
+
+        global comments
 
         content_type, content_string = contents.split(',')
         decoded = io.StringIO(base64.b64decode(content_string).decode('utf-8'))
         data = pd.read_csv(decoded)
-        sensors = data.columns[1:len(data.columns)]
-        data['labels'] = data['labels'] = [0]*data.shape[0]
+
+        comments = pd.DataFrame()
+
+        if 'commentMessage' in data.columns and 'commentTime' in data.columns and 'commentUser' in data.columns:
+            comments['commentTime'] = data.loc[:, 'commentTime']
+            comments['commentUser'] = data.loc[:, 'commentUser']
+            comments['commentMessage'] = data.loc[:, 'commentMessage']
+            data.drop(columns=['commentMessage', 'commentUser',
+                      'commentTime'], inplace=True)
+        print(comments)
+
+        if 'Unnamed: 0' in data.columns:
+            data = data.rename(columns={'Unnamed: 0': 'Time'})
+
+        if 'correctLabels' in data.columns:
+            data = data.rename(columns={'correctLabels': 'labels'})
+        else:
+            data['labels'] = data['labels'] = [0]*data.shape[0]
+
         data['clusterLabels'] = [0]*data.shape[0]
         # sensors = data.columns[1:len(data.columns)]
         # Rename First Column
-        data = data.rename(columns={'Unnamed: 0': 'Time'})
         # data = data.drop(columns=['faultNumber'])
+
+        sensors = data.columns[1:len(data.columns)-2]
 
         print(data)
         x_0 = 0
@@ -502,17 +547,19 @@ def updateTrainingData(contents, mainGraph, useLastNetwork):
 
                 trainingData = trainingData._append(pd.read_csv(decoded))
 
-            # Check contents has the expected columns
-            # ...
+            if 'commentMessage' in trainingData.columns and 'commentTime' in trainingData.columns and 'commentUser' in trainingData.columns:
+                trainingData.drop(
+                    columns=['commentMessage', 'commentTime', 'commentUser'], inplace=True)
 
-            # Check contents has no unexpected columns
-            # ...
+            if 'Unnamed: 0' in trainingData.columns:
+                trainingData.drop(columns=['Unnamed: 0'], inplace=True)
 
-            print(trainingData.columns)
-            trainingData = trainingData.drop(
-                trainingData.columns[[0]], axis=1)  # Remove extra columns
+            if 'Time' in trainingData.columns:
+                trainingData.drop(columns=['Time'], inplace=True)
 
-            X = trainingData.iloc[:, 1:-1]
+            print(X)
+
+            X = trainingData.iloc[:, :-1]
             y = trainingData.iloc[:, -1]
             print(X.shape)
             print(y.shape)
@@ -705,6 +752,7 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
     global x_0
     global x_1
     global currentPoint
+    global t
 
     start_time = time.time()
 
@@ -745,16 +793,23 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
         selectData = []
         maximum = 1  # Used to find the maximum value of all the sensor values
 
-        for i in range(len(sensorDropdown)):
+        if sensorDropdown != None:
+            if sensorDropdown != []:
+                for i in range(len(sensorDropdown)):
 
-            name = sensorDropdown[i]
-            yaxis = 'y' + str(i+1)
+                    name = sensorDropdown[i]
+                    yaxis = 'y' + str(i+1)
 
-            if (data.loc[:, sensorDropdown[i]].max() > maximum):
-                maximum = data.loc[:, sensorDropdown[i]].max()
+                    if (data.loc[:, sensorDropdown[i]].max() > maximum):
+                        maximum = data.loc[:, sensorDropdown[i]].max()
 
-            selectData.append(go.Scatter(
-                y=data.loc[:, sensorDropdown[i]], name=name, yaxis=yaxis, opacity=1-0.2*i))
+                    selectData.append(go.Scatter(
+                        y=data.loc[:, sensorDropdown[i]], name=name, yaxis=yaxis, opacity=1-0.2*i))
+
+        if clickData is not None and 'points' in clickData:
+            point = clickData['points'][0]
+
+            t = point['x']
 
         if (labelButtonClicks % 2 == 0):
 
@@ -833,6 +888,17 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
 
         if (findPrevClicked == 1):
 
+            if (faultFinder == 'Unlabelled Data Point'):
+                target = 0
+            elif (faultFinder == 'No Fault'):
+                target = 1
+            elif (faultFinder == 'Fault 1'):
+                target = 2
+            elif (faultFinder == 'Fault 2'):
+                target = 3
+            elif (faultFinder == 'Fault 3'):
+                target = 4
+
             if (int(currentPoint) == 0):
                 # Create an alert to informt that there are no furher ponts
                 alert2div['display'] = 'flex'
@@ -866,8 +932,8 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
                     x_1 = end + round((end-start)*0.2)
 
         if (newAutoLabel == 1):
-
-            if (sensorChecklist == []):
+            print(sensorChecklist)
+            if (sensorChecklist == [] or sensorChecklist == None):
 
                 alert2div['display'] = 'flex'
                 alert2 = 'Select sensors for auto-detection.'
@@ -919,10 +985,10 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
                         temp = performDBSCAN(df, eps, minVal)
                         if len(list(set(temp))) >= 10:
                             alert2div['display'] = 'flex'
-                            alert2 = 'DBSCAN produced too many clusters. Try increasing epsilon or decreasing min points.'
+                            alert2 = 'DBSCAN produced too many clusters. Try decreasing epsilon or increasing min points.'
                         elif (len(list(set(temp))) == 1):
                             alert2div['display'] = 'flex'
-                            alert2 = 'DBSCAN produced only outliers. Try decreasing epsilon or decreasing min points.'
+                            alert2 = 'DBSCAN produced only outliers. Try increasing epsilon or decreasing min points.'
                         else:
                             data['labels'] = [0]*data.shape[0]
                             data['clusterLabels'] = performDBSCAN(
@@ -945,41 +1011,10 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
         x0 = 0
         x1 = x0
 
-        for i in range(1, len(data['labels'])):
+        if 'labels' in data.columns:
+            for i in range(1, len(data['labels'])):
 
-            if data['labels'][i] != data['labels'][i-1]:
-
-                x1 = i
-                shapes.append({
-                    'type': 'rect',
-                    'x0': x0,
-                    'x1': x1,
-                    'y0': 0,
-                    'y1': 0.05,
-                    'fillcolor': colours[data['labels'][x0]][0],
-                    'yref': 'paper',
-                    'opacity': 1,
-                    'name': str(data['labels'][x0])
-                },)
-
-                x0 = i
-
-        shapes.append({
-            'type': 'rect',
-            'x0': x0,
-            'x1': len(data['labels']),
-            'y0': 0,
-            'y1': 0.05,
-            'fillcolor': colours[data['labels'][x0]][0],
-            'yref': 'paper',
-            'opacity': 1,
-            'name': str(data['labels'][x0])
-        },)
-
-        if len(set(data['clusterLabels'])) != 1:
-            for i in range(1, len(data['clusterLabels'])):
-
-                if data['clusterLabels'][i] != data['clusterLabels'][i-1]:
+                if data['labels'][i] != data['labels'][i-1]:
 
                     x1 = i
 
@@ -989,10 +1024,10 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
                         'x1': x1,
                         'y0': 0,
                         'y1': 0.05,
-                        'fillcolor': greyColours[data['clusterLabels'][x0]][0],
+                        'fillcolor': colours[int(data.loc[x0, 'labels'])][0],
                         'yref': 'paper',
-                        'opacity': 0.2,
-                        'name': 'area'+str(data['clusterLabels'][x0])
+                        'opacity': 1,
+                        'name': str(data['labels'][x0])
                     },)
 
                     x0 = i
@@ -1003,11 +1038,44 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
                 'x1': len(data['labels']),
                 'y0': 0,
                 'y1': 0.05,
-                'fillcolor': greyColours[data['clusterLabels'][x0]][0],
+                'fillcolor': colours[int(data.loc[x0, 'labels'])][0],
                 'yref': 'paper',
-                'opacity': 0.2,
-                'name': 'area'+str(data['clusterLabels'][x0])
+                'opacity': 1,
+                'name': str(data['labels'][x0])
             },)
+
+            if len(set(data['clusterLabels'])) != 1:
+                for i in range(1, len(data['clusterLabels'])):
+
+                    if data['clusterLabels'][i] != data['clusterLabels'][i-1]:
+
+                        x1 = i
+
+                        shapes.append({
+                            'type': 'rect',
+                            'x0': x0,
+                            'x1': x1,
+                            'y0': 0,
+                            'y1': 0.05,
+                            'fillcolor': greyColours[data['clusterLabels'][x0]][0],
+                            'yref': 'paper',
+                            'opacity': 0.9,
+                            'name': 'area'+str(data['clusterLabels'][x0])
+                        },)
+
+                        x0 = i
+
+                shapes.append({
+                    'type': 'rect',
+                    'x0': x0,
+                    'x1': len(data['labels']),
+                    'y0': 0,
+                    'y1': 0.05,
+                    'fillcolor': greyColours[data['clusterLabels'][x0]][0],
+                    'yref': 'paper',
+                    'opacity': 0.9,
+                    'name': 'area'+str(data['clusterLabels'][x0])
+                },)
 
         layout = go.Layout(legend={'x': 0, 'y': 1.2}, xaxis=dict(range=[x_0, x_1]),  dragmode=dragMode, yaxis=dict(fixedrange=True, title='Sensor Value', color='blue'), yaxis2=dict(
             fixedrange=True, overlaying='y', color='orange', side='right'), yaxis3=dict(fixedrange=True, overlaying='y', color='green', side='left', position=0.001,), yaxis4=dict(fixedrange=True, overlaying='y', color='red', side='right'), shapes=shapes)
@@ -1022,10 +1090,15 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
                                'fontSize': 20, 'margin': 10}
 
     if (switchViewButtonClicks % 3 == 1):
+
         xAxis_dropdown_3D_style = {"display": "flex", }
         yAxis_dropdown_3D_style = {"display": "flex"}
 
         sensorDropdownStyle = {'display': 'none'}
+
+        if clickData is not None and 'points' in clickData:
+
+            t = clickData['points'][0]['pointNumber']
 
         if (labelButtonClicks % 2 == 0):
 
@@ -1135,7 +1208,7 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
                 data['clusterLabels'] = [0]*data.shape[0]
             selectData = [go.Scatter(
                 y=data.loc[:, yAxis_dropdown_3D], x=data.loc[:,
-                                                             xAxis_dropdown_3D], text=data.loc[:, 'labels'], mode='markers', marker={'color': [colours[val][0] for val in data['labels']], })]
+                                                             xAxis_dropdown_3D], text=data.loc[:, 'labels'], mode='markers', marker={'color': [colours[int(val)][0] for val in data['labels']], })]
         layout = go.Layout(dragmode=dragMode, yaxis=dict(
             title=yAxis_dropdown_3D), xaxis=dict(
             title=xAxis_dropdown_3D))
@@ -1154,6 +1227,10 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
         xAxis_dropdown_3D_style = {"display": "flex", }
         yAxis_dropdown_3D_style = {"display": "flex"}
         zAxis_dropdown_3D_style = {"display": "flex"}
+
+        if clickData is not None and 'points' in clickData:
+
+            t = clickData['points'][0]['pointNumber']
 
         if (newAutoLabel == 1):
 
@@ -1258,15 +1335,20 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
             fig = px.scatter_3d(data, x=xAxis_dropdown_3D,
                                 y=yAxis_dropdown_3D, z=zAxis_dropdown_3D, color='Time',)
 
-    labels = data['labels'].values.tolist()
-    n = labels.count(0)
-    stat1 = 'Number of unlabelled data points: ' + str(n)
-    stat2 = 'Number of labelled data points: ' + str(len(data['labels']) - n)
-    n = len(set(labels))
-    if 0 in set(labels):
-        stat3 = 'Number of labels Placed: ', int(len(set(labels)))-1
-    else:
-        stat3 = 'Number of labels placed: ', int(len(set(labels)))
+    stat1 = 'Number of unlabelled data points: '
+    stat2 = 'Number of labelled data points: '
+    stat3 = 'Number of labels Placed: '
+
+    if 'labels' in data.columns:
+        labels = data['labels'].values.tolist()
+        n = labels.count(0)
+        stat1 += str(n)
+        stat2 += str(len(data['labels']) - n)
+        n = len(set(labels))
+        if 0 in set(labels):
+            stat3 += str(len(set(labels))-1)
+        else:
+            stat3 += str(len(set(labels)))
 
     end_time = time.time()
     elapsed_time = end_time - start_time
@@ -1285,46 +1367,49 @@ def autoLabelOptions(startAutoLabelClicks):
 
     if startAutoLabelClicks == None:
         raise PreventUpdate
-    dropdowns = [dcc.Markdown('Cluster Colouring:')]
+    dropdowns = []
 
-    for i in range(len(set(data['clusterLabels']))):
+    if 'clusterLabels' in data.columns:
+        for i in range(len(set(data['clusterLabels']))):
 
-        dropdowns.append(
-            dcc.Markdown('Area ' + str(i+1))
-        )
-        dropdowns.append(
-            dcc.Dropdown(
-                style={'display': 'block', 'width': 200},
-                id=f'dropdown-{i}',
-                options=[
-                    {'label': 'No Fault (Green)', 'value': 1},
-                    {'label': 'Fault 1 (Red)', 'value': 2},
-                    {'label': 'Fault 2 (Orange)', 'value': 3},
-                    {'label': 'Fault 3 (Yellow)', 'value': 4},
-                    {'label': 'Fault 4 (Pink)', 'value': 5},
-                    {'label': 'Fault 5 (Purple)', 'value': 6},
-                    {'label': 'Fault 6 (Lavender)', 'value': 7},
-                    {'label': 'Fault 7 (Blue)', 'value': 8},
-                    {'label': 'Fault 8 (Brown)', 'value': 9},
-                    {'label': 'Fault 9 (Cyan)', 'value': 10}
-                ]
+            dropdowns.append(
+                dcc.Markdown('Area ' + str(i+1))
             )
-        )
-
-    for i in range(len(set(data['clusterLabels'])), 11):
-        dropdowns.append(
-            dcc.Markdown('Area ' + str(i+1), style={'display': 'none'},)
-        )
-        dropdowns.append(
-            dcc.Dropdown(
-                style={'display': 'none'},
-                id=f'dropdown-{i}',
-
-                options=[]
+            dropdowns.append(
+                dcc.Dropdown(
+                    style={'display': 'block', 'width': 200,
+                           'background-color': greyColours[i][0]},
+                    id=f'dropdown-{i}',
+                    options=[
+                        {'label': 'No Fault (Green)', 'value': 1},
+                        {'label': 'Fault 1 (Red)', 'value': 2},
+                        {'label': 'Fault 2 (Orange)', 'value': 3},
+                        {'label': 'Fault 3 (Yellow)', 'value': 4},
+                        {'label': 'Fault 4 (Pink)', 'value': 5},
+                        {'label': 'Fault 5 (Purple)', 'value': 6},
+                        {'label': 'Fault 6 (Lavender)', 'value': 7},
+                        {'label': 'Fault 7 (Blue)', 'value': 8},
+                        {'label': 'Fault 8 (Brown)', 'value': 9},
+                        {'label': 'Fault 9 (Cyan)', 'value': 10}
+                    ]
+                )
             )
-        )
+    if 'clusterLabels' in data.columns:
+        for i in range(len(set(data['clusterLabels'])), 11):
+            dropdowns.append(
+                dcc.Markdown('Area ' + str(i+1), style={'display': 'none'},)
+            )
+            dropdowns.append(
+                dcc.Dropdown(
+                    style={'display': 'none'},
+                    id=f'dropdown-{i}',
+
+                    options=[]
+                )
+            )
     dropdowns.append(
-        html.Button('Confirm Labels', id='colorNow')
+        html.Button('Confirm Labels', id='colorNow', style={
+                    'fontSize': 20, 'align-self': 'center', 'font-weight': 'bold', 'margin': 20})
     )
 
     return dropdowns
@@ -1393,49 +1478,6 @@ def colorLabels(colorNow, area0, area1, area2, area3, area4, area5, area6, area7
 
         # calculateAccuray(list(data))
         return 0, ClusterColourContainer, alert2div, alertMessage
-
-# This function displays the user-clicked cooridnate on the screen
-
-
-@app.callback(
-    Output('points-output', 'children'),
-    [Input(mainGraph, 'clickData')],
-    State('switchView', 'n_clicks')
-
-)
-def display_coordinates(click_data, switchViewClicks):
-    if (switchViewClicks == None):
-        switchViewClicks = 0
-
-    global t
-
-    if (switchViewClicks % 3 == 0):
-        if click_data is not None and 'points' in click_data:
-            point = click_data['points'][0]
-
-            t = point['x']
-
-            return f'Clicked point time co-ordinate: {t}'
-
-        else:
-            return 'Click on a point to display its coordinates',
-    elif (switchViewClicks % 3 == 1):
-        if click_data is not None and 'points' in click_data:
-
-            t = click_data['points'][0]['pointNumber']
-
-            return f'Clicked point time co-ordinate: {t}'
-
-    elif (switchViewClicks % 3 == 2):
-        if click_data is not None and 'points' in click_data:
-            point = click_data['points'][0]
-            t = point['pointNumber']
-            return f'Clicked point time co-ordinate: {t}'
-
-        else:
-            return 'Click on a point to display its coordinates',
-
-# This function shows and hides styles as neccesary
 
 
 @app.callback(
@@ -1614,6 +1656,115 @@ def DBSCAN_parameterSelection(clusterMethod, sensorChecklist, reducedSize, reduc
         return n+1, eps
     else:
         raise PreventUpdate
+
+
+# @app.callback(
+#     Output("commentModal", "style"),
+#     Output("commentModal", 'children'),
+#     Output("addComment", "n_clicks"),
+#     Output('closeComments', 'n_clicks'),
+#     Input("open-modal", "n_clicks"),
+#     Input("addComment", "n_clicks"),
+#     # Input("close-modal", "n_clicks"),
+#     State("commentModal", "is_open"),
+#     State("commentInput", 'value'),
+#     State("usernameInput", 'value'),
+#     State("commentModal", "style"),
+#     Input('closeComments', 'n_clicks')
+# )
+# def toggle_modal(open_clicks, is_open, addComment,  commentInput, usernameInput, commentModal, closeClicks):
+
+#     print(open_clicks)
+#     print(closeClicks)
+
+#     global comments
+#     if (addComment):
+#         comments = comments._append({'timestamp': '2024-03-14 10:00:00',
+#                                      'user': usernameInput, 'comment': commentInput}, ignore_index=True)
+#         commentModal['display'] = 'block'
+
+#     modalChidren = [dcc.Markdown("Comments", style={
+#                                  'fontWeight': 'bold'}), html.Button("X", id='closeComments'),],
+
+#     for i in range(comments.shape[0]):
+#         # print(comments.iloc[0, i])
+
+#         modalChidren.append(
+#             html.Div(style={'flex-direction': 'row', 'display': 'flex', 'justify-content': 'space-evenly'},  children=[
+#                 dcc.Markdown(comments.iloc[i, 0]),
+#                 dcc.Markdown(comments.iloc[i, 1]),
+#                 dcc.Markdown(comments.iloc[i, 2]),
+#             ]),)
+
+#     modalChidren.append(html.Div(
+#         html.Div(children=[
+#             dcc.Input(id='commentInput', type='text', value='Comment'),
+#             dcc.Input(id='usernameInput', type='text', value='Name'),
+#             html.Button("Add Comment", id='addComment')]
+#         ),
+#     ),)
+
+#     if (closeClicks == 1):
+#         commentModal['display'] = 'none'
+
+#     return commentModal, modalChidren, 0, 0
+
+
+@app.callback(
+    Output("commentModal", "style"),
+    Output("commentModal", 'children'),
+    Output("addComment", "n_clicks"),
+    Output('closeComments', 'n_clicks'),
+
+
+    Input("open-modal", "n_clicks"),
+    Input('closeComments', 'n_clicks'),
+    Input("addComment", "n_clicks"),
+    State("commentInput", 'value'),
+    State("usernameInput", 'value'),
+    State("commentModal", "style"),
+
+
+
+)
+def toggle_modal(openModal, closeModal, addComments, commentInput, usernameInput, commentModalStyle):
+
+    if openModal == 1:
+        commentModalStyle['display'] = 'block'
+    if closeModal == 1:
+        commentModalStyle['display'] = 'none'
+
+    global comments
+    if (addComments == 1):
+        comments = comments._append({'commentTime': '2024-03-14 10:00:00',
+                                     'commentUser': usernameInput, 'commentMessage': commentInput}, ignore_index=True)
+
+    modalChidren = [
+        html.Div(style={'position': 'relative'}, children=[
+            dcc.Markdown("Comments", style={
+                         'fontWeight': 'bold', 'fontSize': 20}),
+            html.Button("X", id='closeComments', style={'position': 'absolute', 'right': 10, 'top': 10})]
+        )]
+
+    for i in range(comments.shape[0]):
+        # print(comments.iloc[0, i])
+
+        modalChidren.append(
+            html.Div(style={'flex-direction': 'row', 'display': 'flex', 'justify-content': 'space-evenly'},  children=[
+                dcc.Markdown(comments.iloc[i, 0], style={'width': '25%'}),
+                dcc.Markdown(comments.iloc[i, 1], style={'width': '25%'}),
+                dcc.Markdown(comments.iloc[i, 2], style={'width': '50%'}),
+            ]),)
+
+    modalChidren.append(html.Div(
+        html.Div(children=[
+            dcc.Input(id='commentInput', type='text', value='Comment'),
+            dcc.Input(id='usernameInput', type='text', value='Name'),
+            html.Button("Add Comment", id='addComment')]
+        ),
+    ),)
+
+    return commentModalStyle, modalChidren, 0, 0
 
 
 # Run the app

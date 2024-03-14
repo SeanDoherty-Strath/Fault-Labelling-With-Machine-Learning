@@ -5,9 +5,13 @@ import plotly.graph_objs as go
 from dash import html
 import dash_bootstrap_components as dbc
 
-# DATA
-data = pd.read_csv("FaultLabeller/Data/UpdatedData.csv")
-data = data.iloc[:, 4:]
+
+data = pd.DataFrame({
+    'Sensor 1': [],
+    'Sensor 2': [],
+    'Sensor 3': [],
+    'labels': []
+})
 
 # Top
 title = html.H1(children='Fault Labeller', style={
@@ -15,27 +19,94 @@ title = html.H1(children='Fault Labeller', style={
 mainGraph = dcc.Graph(figure=px.line(), style={'flex': '1'})
 
 
+# Comments
+# Define the modal
+commentModal = html.Div(
+    id="commentModal",
+    style={
+        'display': 'none',
+        'position': 'absolute',
+        'top': '50%',
+        'left': '50%',
+                'transform': 'translate(-50%, -50%)',
+                'background-color': 'white',
+                'padding': '20px',
+                'border-radius': '10px',
+                'box-shadow': '0px 0px 10px 0px rgba(0,0,0,0.75)',
+                'z-index': '9999'  # Ensures this div overlays other components
+    },
+    children=[
+        dcc.Markdown("Comments"),
+        html.Button("X", id='closeComments'),
+
+
+        html.Div(children=[
+            dcc.Input(id='commentInput', type='text', value='Comment'),
+            dcc.Input(id='usernameInput', type='text', value='Name'),
+            html.Button(id='addComment')])
+    ]
+
+)
+# Alerts
+alert2container = html.Div(children=[html.Div(id='alert2div',
+                                              style={
+                                                  'display': 'none',
+                                                  'position': 'absolute',
+                                                  'top': '50%',
+                                                  'left': '50%',
+                                                  'width': 400,
+                                                  'height': 150,
+                                                  'transform': 'translate(-50%, -50%)',
+                                                  'background-color': 'white',
+                                                  'padding': '20px',
+                                                  'border-radius': '10px',
+                                                  'box-shadow': '0px 0px 10px 0px rgba(0,0,0,0.75)',
+                                                  'z-index': '9999',  # Ensures this div overlays other components
+                                                  'flex-direction': 'column',
+                                                  'align-items': 'center',
+                                                  'justify-content': 'center'
+                                              },
+                                              children=[
+                                                  dcc.Markdown('Warning: ', style={
+                                                      'fontSize': 24, 'fontWeight': 'bold'}),
+                                                  dcc.Markdown('Message', id='alert2', style={
+                                                               'fontSize': 24}),
+                                                  html.Button(
+                                                      'Close', id='closeAlert2', style={})
+                                              ]
+                                              )])
+# Alert 2
+alert1container = html.Div(children=[html.Div(id='alert1div', style={'display': 'none',  'backgroundColor': 'white', 'border': '5px solid black', 'margin': 10, 'align-items': 'center', 'width': 750, 'height': 50, 'flex-direction': 'row', },
+                                              children=[
+
+    dcc.Markdown('Click Data: ', style={
+        'fontSize': 24, 'fontWeight': 'bold', 'padding': 10}),
+    dcc.Markdown('Message', id='alert1', style={'fontSize': 24}),
+    html.Button('Close', id='closeAlert1', style={'margin-left': 20})
+]
+)])
+
 # Box 1
 sensorHeader = dcc.Markdown('Sensors', style={
     'fontSize': 26, 'fontWeight': 'bold', 'textAlign': 'center', })
-sensorDropdown = dcc.Checklist(options=data.columns, value=[data.columns[0]], style={
-                               'fontSize': 20, 'margin': 10}, inline=True, labelStyle={'width': '33%'})
+sensorDropdown = dcc.Checklist(options=data.columns,  style={
+                               'fontSize': 20, 'margin': 10, 'display': 'none'}, inline=True, labelStyle={'width': '33%'})
 sensorText = dcc.Markdown(
     'Select which sensors you wish to see in the graph above.', style={'textAlign': 'center', 'fontSize': 18})
 
 xAxis_dropdown_3D = dcc.Dropdown(
-    value=data.columns[0], options=data.columns, style={'width': '50%'})
+    value=data.columns[0], options=data.columns, style={'width': '50%', 'display': 'none'})
 yAxis_dropdown_3D = dcc.Dropdown(
-    value=data.columns[1], options=data.columns, style={'width': '50%'})
+    value=data.columns[1], options=data.columns, style={'width': '50%', 'display': 'none'})
 zAxis_dropdown_3D = dcc.Dropdown(
-    value=data.columns[2], options=data.columns, style={'width': '50%'})
+    value=data.columns[2], options=data.columns, style={'width': '50%', 'display': 'none'})
 
 xAxisText = dcc.Markdown(
-    'x axis: ', style={'margin-left': 50, 'fontSize': 20, 'width': '50%'})
+    'x axis: ', style={'margin-left': 50, 'fontSize': 20, 'width': '50%', 'display': 'none'})
 yAxisText = dcc.Markdown(
-    'y axis: ', style={'margin-left': 50, 'fontSize': 20, 'width': '50%'})
+    'y axis: ', style={'margin-left': 50, 'fontSize': 20, 'width': '50%', 'display': 'none'})
 zAxisText = dcc.Markdown(
-    'z axis: ', style={'margin-left': 50, 'fontSize': 20, 'width': '50%'})
+    'z axis: ', style={'margin-left': 50, 'fontSize': 20, 'width': '50%', 'display': 'none'})
 
 
 # Box 3
@@ -77,7 +148,7 @@ reductionMethod = dcc.Dropdown(
 stat1 = dcc.Markdown('No. Labels Placed: ', style={
                      'margin-left': 10, 'fontSize': 20})
 stat2 = dcc.Markdown('No. Types Labels Placed: ', style={
-                     'display': 'none'})
+                     'margin-left': 10, 'fontSize': 20})
 stat3 = dcc.Markdown('Data points unlabelled: ', style={
                      'margin-left': 10, 'fontSize': 20})
 
