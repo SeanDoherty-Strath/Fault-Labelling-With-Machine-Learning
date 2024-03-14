@@ -23,6 +23,7 @@ from tensorflow.keras.layers import Dense
 import pandas as pd
 import matplotlib.pyplot as plt
 import keras
+import tensorflow as tf
 
 # Internal Libraries
 from Components import mainGraph, xAxis_dropdown_3D, yAxis_dropdown_3D, zAxis_dropdown_3D, faultFinder, xAxisText, yAxisText, zAxisText, sensorText, sensorDropdown, sensorHeader, labelDropdown, stat3, stat1, stat2, exportName, exportConfirm, AI_header, clusterMethod, reductionMethod
@@ -30,13 +31,14 @@ from AutoLabellingFunctions import performKMeans, performPCA, performDBSCAN, per
 
 # DATA
 # Load Initial Data (Tenesse Eastment)
-data = pd.read_csv("FaultLabeller/Data/UpdatedData.csv")
-data = data.drop(data.columns[[1, 2, 3]], axis=1)  # Remove extra columns
-data = data.rename(columns={'Unnamed: 0': 'Time'})  # Rename First Column
+# data = pd.read_csv("FaultLabeller/Data/UpdatedData.csv")
+# data = data.drop(data.columns[[1, 2, 3]], axis=1)  # Remove extra columns
+# data = data.rename(columns={'Unnamed: 0': 'Time'})  # Rename First Column
+data = pd.DataFrame()
 
 # 0 for non label, -1 for no fault, 2 for fault 1, 2 for fault 3 etc
-data['labels'] = [0]*data.shape[0]
-data['clusterLabels'] = [0]*data.shape[0]
+# data['labels'] = [0]
+# data['clusterLabels'] = [0]
 
 
 # GLOBAL VARIABLES
@@ -46,6 +48,9 @@ t = None  # The current clicked point
 
 x_0 = 0  # What proportion of the screen is shown
 x_1 = 5000
+
+# NeuralNetwork = tf.keras.models.load_model("multiclassNeuralNetwork")
+
 
 colours = [['grey'], ['green'], ['red'], ['orange'], ['yellow'], ['pink'],
            ['purple'], ['lavender'], ['blue'], ['brown'], ['cyan']]
@@ -59,7 +64,9 @@ app = dash.Dash(__name__)
 
 # Define the layout
 app.layout = html.Div(style={'background': 'linear-gradient(to bottom, blue, #000000)', 'height': '100vh', 'display': 'flex', 'justify-content': 'center', 'flex-direction': 'column', 'align-items': 'center', 'overflow': 'auto'}, children=[
-
+    # TItle
+    dcc.Markdown(id='upload-data-text', children='',
+                 style={'color': 'white', 'fontSize': 40,  'padding-bottom': 15, 'position': 'absolute', 'top': 0}),
     # MODALS
     # Alert 1
     html.Div(id='alert2div', style={'display': 'none', 'backgroundColor': 'white', 'posotion': 'absolute', 'border': '5px solid black',  'margin': 10, 'align-items': 'center', 'width': '90%', 'height': 30, 'flex-direction': 'row', },
@@ -73,6 +80,7 @@ app.layout = html.Div(style={'background': 'linear-gradient(to bottom, blue, #00
     # Alert 2
     html.Div(id='alert1div', style={'display': 'none',  'posotion': 'absolute', 'backgroundColor': 'white', 'border': '5px solid black', 'margin': 10, 'align-items': 'center', 'width': '90%', 'height': 30, 'flex-direction': 'row', },
              children=[
+
         dcc.Markdown('Click Data: ', style={
             'fontSize': 24, 'fontWeight': 'bold', 'padding': 10}),
         dcc.Markdown('Message', id='alert1', style={'fontSize': 24}),
@@ -222,7 +230,7 @@ app.layout = html.Div(style={'background': 'linear-gradient(to bottom, blue, #00
             dcc.Markdown('Clustering: ', style={
                 'fontSize': 22, 'fontWeight': 'bold', 'margin-left': 10, }),
             dcc.Markdown(
-                "Select the clustering algorithm.  Use K-means if you know the number of faults (recommended) or DBSCAN if you do not.", style={'margin-left': 10, 'fontSize': 20}),
+                "Select the clustering algorithm.  Use K-means if you know the number of faults or a Neural Network if you have pre-labelled data.  Use DBSCAN if neither apply.", style={'margin-left': 10, 'fontSize': 20}),
             html.Div(style={'display': 'flex', }, children=[
                 dcc.Markdown(
                     'Clustering Method:', style={'margin-left': 10, 'width': '50%'}),
@@ -237,6 +245,23 @@ app.layout = html.Div(style={'background': 'linear-gradient(to bottom, blue, #00
                 dcc.Input(type='number', id='K', value=3, style={
                     'align-self': 'center', 'width': '100%', 'height': '90%', 'fontSize': 20})
             ]),
+
+            html.Button(
+                id='useLastNetwork',
+                children='Use the most recent neural network',
+
+                style={
+                    'display': 'block',
+                    'width': '100%',
+                    'height': '60px',
+                    'lineHeight': '60px',
+                    'borderWidth': '1px',
+                    'borderStyle': 'dashed',
+                    'borderRadius': '5px',
+                    'textAlign': 'center',
+                    'margin': '10px'
+                },
+            ),
 
             dcc.Upload(
                 id='uploadTrainingData',
@@ -253,8 +278,8 @@ app.layout = html.Div(style={'background': 'linear-gradient(to bottom, blue, #00
                     'textAlign': 'center',
                     'margin': '10px'
                 },
-                # Allow multiple files to be uploaded - come back to change thius
-                multiple=False
+
+                multiple=True
             ),
 
             html.Div(id='epsilon', style={'display': 'flex'}, children=[
@@ -332,8 +357,6 @@ app.layout = html.Div(style={'background': 'linear-gradient(to bottom, blue, #00
                         multiple=False
                     ),
 
-                    dcc.Markdown(id='upload-data-text', children='')
-
 
                 ]
                 )
@@ -375,6 +398,8 @@ def exportCSV(exportClicked, fileName):
 
     exportData = data.drop(columns=['clusterLabels'])
 
+    print(exportData)
+
     exportData.to_csv(csv_filename, index=False)
     return dcc.send_file(csv_filename)
 
@@ -392,9 +417,10 @@ def exportCSV(exportClicked, fileName):
               Output(yAxis_dropdown_3D, 'options'),
               Output(zAxis_dropdown_3D, 'value'),
               Output(zAxis_dropdown_3D, 'options'),
-              [Input('upload-data', 'contents')],
+              Input('upload-data', 'contents'),
+              Input('upload-data', 'filename'),
               prevent_initial_call=True,)
-def update_output(contents):
+def update_output(contents, filename):
     global data
     global shapes
     global x_0
@@ -409,9 +435,11 @@ def update_output(contents):
         data['labels'] = data['labels'] = [0]*data.shape[0]
         data['clusterLabels'] = [0]*data.shape[0]
         # sensors = data.columns[1:len(data.columns)]
-
+        # Rename First Column
+        data = data.rename(columns={'Unnamed: 0': 'Time'})
         # data = data.drop(columns=['faultNumber'])
 
+        print(data)
         x_0 = 0
         x_1 = data.shape[0]
         print(x_1)
@@ -419,121 +447,160 @@ def update_output(contents):
         # shapes = []
         layout = go.Layout(xaxis=dict(range=[x_0, x_1]))
 
-        return 'Success', sensors, [sensors[0]], sensors, {'layout': layout}, sensors[0], sensors, sensors[1], sensors, sensors[2], sensors
+        return 'Fault Labelling: ' + filename, sensors, [sensors[0]], sensors, {'layout': layout}, sensors[0], sensors, sensors[1], sensors, sensors[2], sensors
     else:
         raise PreventUpdate
 
 
 # This function allows the user to upload training data for the neural network
 @app.callback(Output(mainGraph, 'figure', allow_duplicate=True),
+              Output('useLastNetwork', 'n_clicks'),
               Input('uploadTrainingData', 'contents'),
               State(mainGraph, 'figure'),
+              Input('useLastNetwork', 'n_clicks'),
               prevent_initial_call=True
               )
-def updateTrainingData(contents, mainGraph):
-    if contents is not None:
-        # Decode contents
-        content_type, content_string = contents.split(',')
-        decoded = io.StringIO(base64.b64decode(content_string).decode('utf-8'))
-        trainingData = pd.read_csv(decoded)
+def updateTrainingData(contents, mainGraph, useLastNetwork):
 
-        # Check contents has the expected columns
-        # ...
+    if useLastNetwork == None:
+        useLastNetwork = 0
 
-        # Check contents has no unexpected columns
-        # ...
+    if useLastNetwork == 1 or contents is not None:
+        if useLastNetwork == 1:
+            print('use Last network')
+            model = tf.keras.models.load_model("multiclassNeuralNetwork")
 
-        print(trainingData.columns)
-        trainingData = trainingData.drop(
-            trainingData.columns[[0]], axis=1)  # Remove extra columns
+            df = data.iloc[:, 1:-2]
+            predictLabels = model.predict(df)
 
-        X = trainingData.iloc[:, :-1]
-        y = trainingData.iloc[:, -1]
-        print(X.shape)
-        print(y.shape)
+            # Round the highest value to 1 and all others to 0
+            roundedLabels = np.zeros_like(predictLabels)
+            roundedLabels[np.arange(len(predictLabels)),
+                          predictLabels.argmax(axis=1)] = 1
 
-        print(type(y))
-        y = np.array(y)
-        # One-hot encode the target labels
-        encoder = OneHotEncoder(sparse=False)
-        y = encoder.fit_transform(y.reshape(-1, 1))
-        print(y)
+            data['labels'] = np.argmax(roundedLabels, axis=1)
 
-        # Split the dataset into training and testing sets
-        X_train, X_test, y_train, y_test = train_test_split(
-            X, y, test_size=0.2, random_state=42)
+            print((data['labels']))
 
-        inputSize = X.shape[1]
-        outputSize = 4
+            for i in range(data.shape[0]):
+                # data.loc['labels', i] += 1
+                data.loc[i, 'labels'] += 1
 
-        # Define the model
-        model = Sequential([
-            Dense(64, activation='relu', input_shape=(
-                inputSize,)),  # 4 input features
-            Dense(32, activation='relu'),
-            Dense(16, activation='relu'),  # Input layer with 52 neurons
-            # Output layer with 3 units for 3 classes
-            Dense(outputSize, activation='softmax')
-        ])
+            print((data['labels']))
 
-        # Compile the model
-        model.compile(optimizer='adam',
-                      # Use categorical crossentropy for one-hot encoded labels
-                      loss='categorical_crossentropy',
-                      metrics=['accuracy'])
+            # print(roundedLabels)
+            # labels = encoder.inverse_transform(roundedLabels)
+            # data['labels'] = labels
 
-        epochs = []
-        losses = []
+        elif contents is not None:
+            # Decode contents
+            trainingData = pd.DataFrame()
+            for i in range(0, len(contents)):
+                content_type, content_string = contents[i].split(',')
+                decoded = io.StringIO(base64.b64decode(
+                    content_string).decode('utf-8'))
 
-        class LossHistory(keras.callbacks.Callback):
-            def on_epoch_end(self, epoch, logs=None):
-                epochs.append(epoch)
-                losses.append(logs['loss'])
+                trainingData = trainingData._append(pd.read_csv(decoded))
 
-        # Train the model
-        model.fit(X_train, y_train, epochs=50, batch_size=32,
-                  validation_data=(X_test, y_test), callbacks=[LossHistory()])
+            # Check contents has the expected columns
+            # ...
 
-        # plt.plot(epochs, losses, label='Training Loss')
-        # plt.xlabel('Epochs')
-        # plt.ylabel('Loss')
-        # plt.title('Loss vs. Epochs')
-        # plt.legend()
-        # plt.show()
+            # Check contents has no unexpected columns
+            # ...
 
-        # Evaluate the model
-        test_loss, test_acc = model.evaluate(X_test, y_test)
+            print(trainingData.columns)
+            trainingData = trainingData.drop(
+                trainingData.columns[[0]], axis=1)  # Remove extra columns
 
-        print('Test accuracy:', test_acc)
+            X = trainingData.iloc[:, 1:-1]
+            y = trainingData.iloc[:, -1]
+            print(X.shape)
+            print(y.shape)
 
-        df = data.iloc[:, 1:-2]
-        print(df)
+            print(type(y))
+            y = np.array(y)
+            outputSize = len(set(y))
+            print('Output Size: ', outputSize)
+            # One-hot encode the target labels
+            encoder = OneHotEncoder(sparse=False)
+            y = encoder.fit_transform(y.reshape(-1, 1))
+            print(y)
 
-        predictLabels = model.predict(df)
+            # Split the dataset into training and testing sets
+            X_train, X_test, y_train, y_test = train_test_split(
+                X, y, test_size=0.2, random_state=42)
 
-        # Round the highest value to 1 and all others to 0
-        roundedLabels = np.zeros_like(predictLabels)
-        roundedLabels[np.arange(len(predictLabels)),
-                      predictLabels.argmax(axis=1)] = 1
+            inputSize = X.shape[1]
+            # outputSize = 4
 
-        print(roundedLabels)
-        labels = encoder.inverse_transform(roundedLabels)
+            # Define the model
+            model = Sequential([
+                Dense(64, activation='relu', input_shape=(
+                    inputSize,)),  # 4 input features
+                Dense(32, activation='relu'),
+                Dense(16, activation='relu'),  # Input layer with 52 neurons
+                # Output layer with 3 units for 3 classes
+                Dense(outputSize, activation='softmax')
+            ])
 
-        # Print the original categorical labels
-        print("Original Categorical Labels:")
-        print(labels)
-        data['labels'] = labels
+            # Compile the model
+            model.compile(optimizer='adam',
+                          # Use categorical crossentropy for one-hot encoded labels
+                          loss='categorical_crossentropy',
+                          metrics=['accuracy'])
 
-        # print(data)
-        print(set(data['labels']))
+            epochs = []
+            losses = []
 
-        # print(roundedLabels)
-        # plt.plot(roundedLabels)
-        # plt.show()
+            class LossHistory(keras.callbacks.Callback):
+                def on_epoch_end(self, epoch, logs=None):
+                    epochs.append(epoch)
+                    losses.append(logs['loss'])
 
-        # layout = go.Layout(xaxis=dict(range=[x_0, x_1]))
+            # Train the model
+            model.fit(X_train, y_train, epochs=50, batch_size=32,
+                      validation_data=(X_test, y_test), callbacks=[LossHistory()])
 
-        # Go through labels and shown all the shapes
+            model.save("multiclassNeuralNetwork")
+
+            # plt.plot(epochs, losses, label='Training Loss')
+            # plt.xlabel('Epochs')
+            # plt.ylabel('Loss')
+            # plt.title('Loss vs. Epochs')
+            # plt.legend()
+            # plt.show()
+
+            # Evaluate the model
+            test_loss, test_acc = model.evaluate(X_test, y_test)
+
+            print('Test accuracy:', test_acc)
+
+            df = data.iloc[:, 1:-2]
+            predictLabels = model.predict(df)
+
+            # Round the highest value to 1 and all others to 0
+            roundedLabels = np.zeros_like(predictLabels)
+            roundedLabels[np.arange(len(predictLabels)),
+                          predictLabels.argmax(axis=1)] = 1
+
+            print(roundedLabels)
+            labels = encoder.inverse_transform(roundedLabels)
+
+            # Print the original categorical labels
+            print("Original Categorical Labels:")
+            print(labels)
+            data['labels'] = labels
+
+            # print(data)
+            print(set(data['labels']))
+
+            # print(roundedLabels)
+            # plt.plot(roundedLabels)
+            # plt.show()
+
+            # layout = go.Layout(xaxis=dict(range=[x_0, x_1]))
+
+            # Go through labels and shown all the shapes
         shapes = []
         x0 = 0
         x1 = x0
@@ -575,7 +642,7 @@ def updateTrainingData(contents, mainGraph):
         mainGraph['layout'] = go.Layout(legend={'x': 0, 'y': 1.2}, xaxis=dict(range=[x_0, x_1]),  dragmode='pan', yaxis=dict(fixedrange=True, title='Sensor Value', color='blue'), yaxis2=dict(
             fixedrange=True, overlaying='y', color='orange', side='right'), yaxis3=dict(fixedrange=True, overlaying='y', color='green', side='left', position=0.001,), yaxis4=dict(fixedrange=True, overlaying='y', color='red', side='right'), shapes=shapes)
 
-        return mainGraph
+        return mainGraph, 0
     else:
         raise PreventUpdate
 
@@ -947,7 +1014,7 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
 
         if t is not None:
             selectData.append(
-                go.Line(x=[t, t], y=[0, maximum], name='Selected Point', line=dict(color='black')))
+                go.Line(x=[t, t], y=[0, data.loc[:, sensorDropdown[0]].max()], name='Selected Point', line=dict(color='black')))
 
         fig = {'data': selectData, 'layout': layout, }
 
@@ -1216,7 +1283,10 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
 )
 def autoLabelOptions(startAutoLabelClicks):
 
+    if startAutoLabelClicks == None:
+        raise PreventUpdate
     dropdowns = [dcc.Markdown('Cluster Colouring:')]
+
     for i in range(len(set(data['clusterLabels']))):
 
         dropdowns.append(
@@ -1471,14 +1541,16 @@ def selectDeselectAll(selectClicks, deselectClicks, graphSensors, sensorDropdown
     Output('epsilon', 'style'),
     Output('minVal', 'style'),
     Output('uploadTrainingData', 'style'),
+    Output('useLastNetwork', 'style'),
 
 
     Input(clusterMethod, 'value'),
     Input(reductionMethod, 'value'),
     Input('switchView', 'n_clicks'),
-    State('uploadTrainingData', 'style')
+    State('uploadTrainingData', 'style'),
+    State('useLastNetwork', 'style'),
 )
-def autoLabelStyles(clusterMethod, reductionMethod, switchView, uploadTrainingData):
+def autoLabelStyles(clusterMethod, reductionMethod, switchView, uploadTrainingData, useLastNetwork):
 
     K_style = {'display': 'none'}
     kMeansMarkdown = {'display': 'none'}
@@ -1487,6 +1559,7 @@ def autoLabelStyles(clusterMethod, reductionMethod, switchView, uploadTrainingDa
     epsStyle = {'display': 'none'}
     minValStyle = {'display': 'none'}
     uploadTrainingData['display'] = 'none'
+    useLastNetwork['display'] = 'none'
 
     if switchView == None:
         switchView = 0
@@ -1503,6 +1576,7 @@ def autoLabelStyles(clusterMethod, reductionMethod, switchView, uploadTrainingDa
 
     if (clusterMethod == 'Neural Network (Supervised)'):
         uploadTrainingData['display'] = 'block'
+        useLastNetwork['display'] = 'block'
 
     if (reductionMethod == 'PCA'):
         reducedStyle_style = {'display': 'block', 'align-self': 'center',
@@ -1510,7 +1584,7 @@ def autoLabelStyles(clusterMethod, reductionMethod, switchView, uploadTrainingDa
         reducedSizeMarkdown = {'display': 'block',
                                'margin-left': 10, 'width': '50%'}
 
-    return K_style, reducedStyle_style, reducedSizeMarkdown, kMeansMarkdown, epsStyle, minValStyle, uploadTrainingData
+    return K_style, reducedStyle_style, reducedSizeMarkdown, kMeansMarkdown, epsStyle, minValStyle, uploadTrainingData, useLastNetwork
 
 # This function finds the optimal value of minPts and epsilon, dependent on the user selected parameters
 
