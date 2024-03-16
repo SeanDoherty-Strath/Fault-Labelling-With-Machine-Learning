@@ -25,6 +25,8 @@ import matplotlib.pyplot as plt
 import keras
 import tensorflow as tf
 import dash_bootstrap_components as dbc
+import datetime
+
 
 # Internal Libraries
 from Components import mainGraph, xAxis_dropdown_3D, yAxis_dropdown_3D, zAxis_dropdown_3D, faultFinder, xAxisText, alert1container, alert2container,  yAxisText, zAxisText, sensorText, sensorDropdown, commentModal, sensorHeader, labelDropdown, stat3, stat1, stat2, exportName, exportConfirm, AI_header, clusterMethod, reductionMethod
@@ -556,8 +558,6 @@ def updateTrainingData(contents, mainGraph, useLastNetwork):
 
             if 'Time' in trainingData.columns:
                 trainingData.drop(columns=['Time'], inplace=True)
-
-            print(X)
 
             X = trainingData.iloc[:, :-1]
             y = trainingData.iloc[:, -1]
@@ -1091,7 +1091,7 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
 
     if (switchViewButtonClicks % 3 == 1):
 
-        xAxis_dropdown_3D_style = {"display": "flex", }
+        xAxis_dropdown_3D_style = {"display": "flex"}
         yAxis_dropdown_3D_style = {"display": "flex"}
 
         sensorDropdownStyle = {'display': 'none'}
@@ -1224,7 +1224,8 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
 
     if (switchViewButtonClicks % 3 == 2):
         #  3D SCATTER PLOT
-        xAxis_dropdown_3D_style = {"display": "flex", }
+
+        xAxis_dropdown_3D_style = {"display": "flex"}
         yAxis_dropdown_3D_style = {"display": "flex"}
         zAxis_dropdown_3D_style = {"display": "flex"}
 
@@ -1735,8 +1736,10 @@ def toggle_modal(openModal, closeModal, addComments, commentInput, usernameInput
         commentModalStyle['display'] = 'none'
 
     global comments
+    time = datetime.datetime.now().strftime("%H:%M")
+
     if (addComments == 1):
-        comments = comments._append({'commentTime': '2024-03-14 10:00:00',
+        comments = comments._append({'commentTime': time,
                                      'commentUser': usernameInput, 'commentMessage': commentInput}, ignore_index=True)
 
     modalChidren = [

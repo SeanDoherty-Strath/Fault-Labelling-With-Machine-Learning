@@ -95,18 +95,18 @@ sensorText = dcc.Markdown(
     'Select which sensors you wish to see in the graph above.', style={'textAlign': 'center', 'fontSize': 18})
 
 xAxis_dropdown_3D = dcc.Dropdown(
-    value=data.columns[0], options=data.columns, style={'width': '50%', 'display': 'none'})
+    value=data.columns[0], options=data.columns, style={'width': '50%', 'display': 'block'})
 yAxis_dropdown_3D = dcc.Dropdown(
-    value=data.columns[1], options=data.columns, style={'width': '50%', 'display': 'none'})
+    value=data.columns[1], options=data.columns, style={'width': '50%', 'display': 'block'})
 zAxis_dropdown_3D = dcc.Dropdown(
-    value=data.columns[2], options=data.columns, style={'width': '50%', 'display': 'none'})
+    value=data.columns[2], options=data.columns, style={'width': '50%', 'display': 'block'})
 
 xAxisText = dcc.Markdown(
-    'x axis: ', style={'margin-left': 50, 'fontSize': 20, 'width': '50%', 'display': 'none'})
+    'x axis: ', style={'margin-left': 50, 'fontSize': 20, 'width': '50%', 'display': 'block'})
 yAxisText = dcc.Markdown(
-    'y axis: ', style={'margin-left': 50, 'fontSize': 20, 'width': '50%', 'display': 'none'})
+    'y axis: ', style={'margin-left': 50, 'fontSize': 20, 'width': '50%', 'display': 'block'})
 zAxisText = dcc.Markdown(
-    'z axis: ', style={'margin-left': 50, 'fontSize': 20, 'width': '50%', 'display': 'none'})
+    'z axis: ', style={'margin-left': 50, 'fontSize': 20, 'width': '50%', 'display': 'block'})
 
 
 # Box 3
