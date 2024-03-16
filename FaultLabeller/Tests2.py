@@ -16,7 +16,7 @@ import numpy as np
 from sklearn.preprocessing import StandardScaler
 
 # DATA
-data = pd.read_csv("FaultLabeller/Data/OperatingScenario1.csv")
+data = pd.read_csv("FaultLabeller/Data/Scenario1.csv")
 data = data.drop(data.columns[[0]], axis=1)  # Remove extra columns
 print(data)
 
@@ -56,13 +56,14 @@ combinations.append(threes + twos + threes + ones + threes + zeros)
 
 
 bestAccuracy = 0
-k = 13
+k = 8
 
 data = performAutoEncoding(data)
-# data = performPCA(data, 3)
+# # data = performPCA(data, 3)
 eps = findKneePoint(data, k)
-predictedLabels = performDBSCAN(data, eps, k)
-print(eps)
+predictedLabels = performDBSCAN(data, eps+0.1, k)
+# predictedLabels = performKMeans(data, 4)
+# print(eps)
 
 
 for c in combinations:
@@ -78,3 +79,4 @@ for c in combinations:
 
 
 print('Accuracy: %:', bestAccuracy)
+#

@@ -13,6 +13,7 @@ import numpy as np
 import keras
 from keras import layers
 import pandas as pd
+import tensorflow as tf
 
 
 def performPCA(df, n):
@@ -95,46 +96,43 @@ def performAutoEncoding(data):
     # Create new df with the normalized values
     data = pd.DataFrame(normalized_values, columns=data.columns)
 
-    # return data
+    # # return data
     length = data.shape[1]
 
     # Define the dimensions
     input_output_dimension = length
     hidden_layer_dimension = round(length/2)
-    encoding_dimension = round(length/4)
+    encoding_dimension = 10
 
-    # INPUT LAYER
     input_layer = keras.Input(shape=(input_output_dimension,))
-
-    # ENCODER
-    encoder = layers.Dense(hidden_layer_dimension,
-                           activation='relu',)(input_layer)
-
-    encoder = layers.Dense(encoding_dimension, activation='relu')(encoder)
-
-    # DECODER
-    decoder = layers.Dense(hidden_layer_dimension, activation='relu')(encoder)
-
-    decoder = layers.Dense(input_output_dimension,
-                           activation='linear')(decoder)
+    # input_layer = layers.Dropout(0.01)(input_layer)
+    encoder = layers.Dense(
+        hidden_layer_dimension, activation='relu', activity_regularizer=tf.keras.regularizers.l1(0.05))(input_layer)
+    # encoder = layers.Dropout(0.01)(encoder)
+    hidden_layer = layers.Dense(
+        encoding_dimension, activation='relu', activity_regularizer=tf.keras.regularizers.l1(0.05))(encoder)
+    decoder = layers.Dense(hidden_layer_dimension,
+                           activation='relu')(hidden_layer)
+    output_layer = layers.Dense(
+        input_output_dimension, activation='linear')(decoder)
 
     # AUTOENCODER
-    autoencoder = keras.Model(inputs=input_layer, outputs=decoder)
+    autoencoder = keras.Model(inputs=input_layer, outputs=output_layer)
 
     # COMPILE MODEL
     autoencoder.compile(optimizer='adam', loss='mse')
 
     # Record losses and epochs during training
-    num_epochs = 100
+    num_epochs = 50
     epochs = []
     losses = []
 
     #  prepare  input data.
     # xTrain = data.iloc[:16000, :]  # first 4/5 for training
     # xTest = data.iloc[16000:, :]  # final 1/5  for testing
-    data2 = data.iloc[:, :]
-    xTrain = data2.sample(frac=0.8, random_state=42)
-    xTest = data2.drop(xTrain.index)
+
+    xTrain = data.sample(frac=0.8, random_state=42)
+    xTest = data.drop(xTrain.index)
 
     losses = []
     epochs = []

@@ -20,6 +20,8 @@ from keras import layers
 import pandas as pd
 from sklearn.metrics import mean_absolute_error
 import time
+import tensorflow as tf
+import tensorflow_addons as tfa
 
 
 def performAutoEncoding(data):
@@ -31,6 +33,12 @@ def performAutoEncoding(data):
     # Create new df with the normalized values
     data = pd.DataFrame(normalized_values, columns=data.columns)
 
+    # Add noise to input data
+
+    noise = np.random.normal(0.0, scale=1.0, size=data.shape)
+
+    # data2 = data + 0 * noise
+
     # return data
     # length = data.shape[1]
 
@@ -39,23 +47,75 @@ def performAutoEncoding(data):
     # # hidden_layer_dimension =
     # encoding_dimension = 13
 
-    # INPUT LAYER
-    input_layer = keras.Input(shape=(50,))
-    encoder = layers.Dense(25, activation='relu',)(input_layer)
-    hidden_layer = layers.Dense(12, activation='relu')(encoder)
-    decoder = layers.Dense(25, activation='relu')(hidden_layer)
-    output_layer = layers.Dense(50, activation='linear')(decoder)
+    # # INPUT LAYER
+    # input_layer = keras.Input(shape=(52,))
+    # # input_layer = layers.Dropout(0.01)(input_layer)
+    # encoder = layers.Dense(
+    #     32, activation='relu', activity_regularizer=tf.keras.regularizers.l1(0.0005))(input_layer)
+    # # encoder = layers.Dropout(0.01)(encoder)
+    # hidden_layer = layers.Dense(
+    #     16, activation='relu', activity_regularizer=tf.keras.regularizers.l1(0.0005))(encoder)
+    # decoder = layers.Dense(32, activation='relu')(hidden_layer)
+    # output_layer = layers.Dense(52, activation='linear')(decoder)
 
-    # AUTOENCODER
-    autoencoder = keras.Model(inputs=input_layer, outputs=output_layer)
+    input_layer = keras.Input(shape=(52,))
+    # input_layer = layers.Dropout(0.01)(input_layer)
+    encoder = layers.Dense(
+        32, activation='relu')(input_layer)
+    # encoder = layers.Dropout(0.01)(encoder)
+    hidden_layer = layers.Dense(
+        16, activation='relu', )(encoder)
+    decoder = layers.Dense(32, activation='relu')(hidden_layer)
+    output_layer = layers.Dense(52, activation='linear')(decoder)
 
-    # COMPILE MODEL
+    # # AUTOENCODER
+
+    #     # Choose regularization type (L1 or L2) and rate
+    # regularization_type = 'l1'  # Change to 'l2' if you want L2 regularization
+    # regularization_rate = 0.001
+
+    # # Define and compile the autoencoder model with regularization
+    # regularization = None
+    # if regularization_type == 'l1':
+    #     regularization = tf.keras.regularizers.l1
+    # elif regularization_type == 'l2':
+    #     regularization = tf.keras.regularizers.l2
+
+    # autoencoder = autoencoder_with_regularization(input_shape, latent_dim, regularization, regularization_rate)
     # autoencoder.compile(optimizer='adam', loss='mse')
 
-    autoencoder.compile(optimizer='adam', loss='mse')
+    # def autoencoder_with_regularization(regularization, regularization_rate=0.01):
 
+    #     # input_layer = keras.Input(shape=(52,))
+    #     # encoder = layers.Dense(32, activation='relu', activity_regularizer=regularization(
+    #     #     regularization_rate))(input_layer)
+    #     # hidden_layer = layers.Dense(
+    #     #     8, activation='relu', activity_regularizer=regularization(regularization_rate))(encoder)
+    #     # decoder = layers.Dense(32, activation='relu',)(hidden_layer)
+    #     # output_layer = layers.Dense(52, activation='linear')(decoder)
+
+    #     input_layer = keras.Input(shape=(52,))
+    #     encoder = layers.Dense(32, activation='relu', )(input_layer)
+    #     hidden_layer = layers.Dense(8, activation='relu')(encoder)
+    #     decoder = layers.Dense(32, activation='relu',)(hidden_layer)
+    #     output_layer = layers.Dense(52, activation='linear')(decoder)
+
+    #     autoencoder = keras.Model(inputs=input_layer, outputs=output_layer)
+
+    #     return autoencoder
+
+    # regularization = tf.keras.regularizers.l2
+    # regularization_rate = 0.01
+
+    # autoencoder = autoencoder_with_regularization(
+    #     None, None)
+    # autoencoder.compile(optimizer='adam', loss='mse')
+    autoencoder = keras.Model(inputs=input_layer, outputs=output_layer)
+    autoencoder.compile(optimizer='adam',
+                        loss='mse')
+    # autoencoder.compile(optimizer='adam', loss=tf.keras.losses.Huber())
     # Record losses and epochs during training
-    num_epochs = 100
+    num_epochs = 50
     epochs = []
     losses = []
 
@@ -63,7 +123,10 @@ def performAutoEncoding(data):
     # nColumns = data.shape[0]
     # xTrain = data.iloc[:round(nColumns*(4/5)), :]  # first 4/5 for training
     # xTest = data.iloc[round(nColumns*(4/5)):, :]  # final 1/5  for testing
-    data2 = data.iloc[:, :]
+
+    data2 = data
+    noise = np.random.normal(0.0, scale=1.0, size=data2.shape)
+    data2 = data2 + 0.05*noise
     xTrain = data2.sample(frac=0.8, random_state=42)
     print('xTrainSize:')
     print(xTrain.shape)
@@ -96,7 +159,7 @@ def performAutoEncoding(data):
     mae = mean_absolute_error(data, predictedData)  # mean absolute error
 
     # Option 2: Time series
-    plt.figure(figsize=(20, 4))
+    # plt.figure(figsize=(20, 4))
 
     for i in range(4):
         # Display original
@@ -120,14 +183,13 @@ def performAutoEncoding(data):
     return losses
 
 
-data = pd.read_csv("FaultLabeller/Data/OperatingScenario1.csv")
+data = pd.read_csv("FaultLabeller/Data/Scenario1.csv")
+
 data = data.drop(data.columns[[0]], axis=1)  # Remove extra columns
+data = data.iloc[:, :52]
 
 # data = data.rename(columns={'Unnamed: 0': 'Time'})  # Rename First Column
-
-
-data = data.iloc[:, :50]
-print(data.shape)
 print(data)
+print(data.shape)
 
 performAutoEncoding(data)
