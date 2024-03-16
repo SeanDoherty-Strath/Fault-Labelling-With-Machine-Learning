@@ -4,7 +4,7 @@ import plotly.express as px
 import plotly.graph_objs as go
 from dash import html
 import dash_bootstrap_components as dbc
-
+import Styles
 
 data = pd.DataFrame({
     'Sensor 1': [],
@@ -14,10 +14,48 @@ data = pd.DataFrame({
 })
 
 # Top
-title = html.H1(children='Fault Labeller', style={
-                'fontsize': 100, 'color': 'white', 'fontWeight': 'bold', 'textAlign': 'left', 'fontFamily': ''})
-mainGraph = dcc.Graph(figure=px.line(), style={'flex': '1'})
+title = dcc.Markdown(children='Upload Data to Begin Fault Labelling', style={
+                     'color': 'white', 'fontSize': 30,  'padding-bottom': 15, 'position': 'absolute', 'top': 0})
 
+topBox = html.Div(style=Styles.topBox,
+                  children=[
+                      html.Button('Switch View', id='switchView',
+                                  style={'fontSize': 20, 'margin': 20, 'position': 'absolute', 'left': 0, 'top': 0}),
+                      html.Button('View Time Representation', id='switchRepresentation', style={
+                          'fontSize': 20, 'margin': 20, 'position': 'absolute', 'left': 130, 'top': 0}),
+                      html.Button("Open Comments", id="open-modal",
+                                  style={
+                                      'fontSize': 20, 'margin': 20, 'position': 'absolute', 'right': 0, 'top': 0}),
+                      html.Div(style={'flex-direction': 'row', 'display': 'flex', 'width': '100%', 'height': '100%', },
+                               children=[
+                          html.Div(id='ClusterColourContainer', style={"display": "none", 'flex': '1'},
+                                   children=[
+                              dcc.Dropdown(
+                                  style={'display': 'none'}, id='dropdown-0'),
+                              dcc.Dropdown(
+                                  style={'display': 'none'}, id='dropdown-1'),
+                              dcc.Dropdown(
+                                  style={'display': 'none'}, id=f'dropdown-2'),
+                              dcc.Dropdown(
+                                  style={'display': 'none'}, id=f'dropdown-3'),
+                              dcc.Dropdown(
+                                  style={'display': 'none'}, id=f'dropdown-4'),
+                              dcc.Dropdown(
+                                  style={'display': 'none'}, id=f'dropdown-5'),
+                              dcc.Dropdown(
+                                  style={'display': 'none'}, id=f'dropdown-6'),
+                              dcc.Dropdown(
+                                  style={'display': 'none'}, id=f'dropdown-7'),
+                              dcc.Dropdown(
+                                  style={'display': 'none'}, id=f'dropdown-8'),
+                              dcc.Dropdown(
+                                  style={'display': 'none'}, id=f'dropdown-9'),
+                              html.Button(
+                                  style={'display': 'none'}, id='colorNow'),]),
+                          dcc.Graph(id='mainGraph', figure=px.line(),
+                                    style={'flex': '1'}),
+                      ])
+                  ])
 
 # Comments
 # Define the modal
@@ -138,6 +176,74 @@ labelDropdown = dcc.Dropdown(value=1, options=[
 # Box 4
 AI_header = dcc.Markdown('Automatically Label Faults', style={
                          'fontSize': 26, 'fontWeight': 'bold', 'textAlign': 'center', })
+AI_text1 = dcc.Markdown(
+    "Follow the steps to auto label the data set.  This will suggest the time and duration of faults. ", style={'textAlign': 'center', 'fontSize': 20})
+
+AI_text2 = dcc.Markdown('Sensors: ', style={
+    'fontSize': 22, 'fontWeight': 'bold', 'margin-left': 10, })
+
+AI_text3 = dcc.Markdown(
+    "Start by selecting the sensors associated with the fault:", style={'margin-left': 10, 'fontSize': 20})
+
+AI_text4 = dcc.Markdown('Feature Reduction: ', style={
+    'fontSize': 22, 'fontWeight': 'bold', 'margin-left': 10, })
+
+AI_text5 = dcc.Markdown(
+    "Clustering on many sensors can be poor.  Reduce the feature set through either PCA (recommended) or autoencoding.", style={'margin-left': 10, 'fontSize': 20})
+AI_text6 = dcc.Markdown(
+    'Reduction Method:', style={'margin-left': 10, 'width': '50%'})
+
+AI_text7 = dcc.Markdown('Reduced Size:', id='reducedSizeMarkdown', style={
+    'margin-left': 10, 'width': '50%', 'display': 'none'})
+
+AI_text8 = dcc.Markdown('Clustering: ', style={
+    'fontSize': 22, 'fontWeight': 'bold', 'margin-left': 10, })
+
+reducedSize = dcc.Input(type='number', id='reducedSize', style={
+    'align-self': 'center', 'width': '100%', 'height': '90%', 'fontSize': 20, 'display': 'none'})
+
+uploadNewAutoencoder = dcc.Upload(
+    children='Select data to train a new autoencoder',
+    style={
+        'height': '60px',
+        'lineHeight': '60px',
+        'borderWidth': '1px',
+        'borderStyle': 'dashed',
+        'borderRadius': '5px',
+        'textAlign': 'center',
+        'margin': '10px',
+        'display': 'none'
+    },
+    multiple=False
+)
+
+AI_text9 = dcc.Markdown(
+    "Select the clustering algorithm.  Use K-means if you know the number of faults or a Neural Network if you have pre-labelled data.  Use DBSCAN if neither apply.", style={'margin-left': 10, 'fontSize': 20})
+
+
+AI_text10 = dcc.Markdown('Clustering Method:', style={
+                         'margin-left': 10, 'width': '50%'})
+
+AI_text11 = dcc.Markdown('No. Clusters (K)', id='kMeansMarkdown',  style={
+    'margin-left': 10, 'width': '50%'})
+K = dcc.Input(type='number', value=3, style={
+    'align-self': 'center', 'width': '100%', 'height': '90%', 'fontSize': 20})
+
+
+AI_sensorChecklist = html.Div(style={'width': '100%', 'overflow': 'scroll'}, children=[
+    dcc.Checklist(
+        id='sensor-checklist', options=[], inline=True, labelStyle={'width': '25%', 'fontSize': 14})
+])
+
+AI_selectButtons = html.Div(style={'display': 'flex'}, children=[
+    html.Button(
+        "Select all", id='select-all', style=Styles.AI_button1),
+    html.Button(
+        "Deselect all", id='deselect-all', style=Styles.AI_button1),
+    html.Button(
+        "Select Sensors in Graph", id='graphSensors', style=Styles.AI_button1)
+])
+
 clusterMethod = dcc.Dropdown(
     options=['K Means', 'DBSCAN', 'Neural Network (Supervised)'], value='K Means', style={'width': '100%'})
 reductionMethod = dcc.Dropdown(
@@ -168,11 +274,42 @@ uploadData = dcc.Upload(
         'borderStyle': 'dashed',
         'borderRadius': '5px',
         'textAlign': 'center',
-        'margin': '10px'
+        'margin': '10px',
+        'display': 'none'
     },
     # Allow multiple files to be uploaded
     multiple=False
-),
+)
+
+uploadTrainingData = dcc.Upload(
+
+    children='Select data to train a new neural network',
+
+    style={
+        'display': 'none',
+        'height': '60px',
+        'lineHeight': '60px',
+        'borderWidth': '1px',
+        'borderStyle': 'dashed',
+        'borderRadius': '5px',
+        'textAlign': 'center',
+        'margin': '10px'
+    },
+
+    multiple=True
+)
+
+AI_text12 = dcc.Markdown('Epsilon:',  style={
+    'margin-left': 10, 'width': '50%', 'display': 'none'})
+
+epsSlider = dcc.Slider(min=0, max=2,  marks={i: str(
+    i) for i in range(0, 2)}, step=0.1, value=0.1)
+
+AI_text13 = dcc.Markdown('Min Value:', style={
+                         'margin-left': 10, 'width': '50%', 'display': 'none'})
+
+minPtsSlider = dcc.Slider(min=1, max=60,  marks={i: str(
+    i) for i in range(0, 60, 5)}, step=1, value=9)
 
 
 exportName = dcc.Input(
@@ -188,3 +325,45 @@ exportConfirm = html.Button(
     'Export',
     style={'width': '20%', 'height': 30}
 )
+
+
+navigatorTitle = dcc.Markdown(
+    "Navigator", style={'margin': '20', 'fontSize': 24, 'fontWeight': 'bold'})
+navigationText = dcc.Markdown(
+    'Search for:', style={'margin-left': 10, 'width': '25%'})
+navigationButtons = html.Div(style={'flex-direction': 'row'}, children=[
+    html.Button('Previous', id='findPrev', style={
+                'width': 80, 'height': 25, 'margin': 10, 'fontSize': 16}),
+    html.Button('Next', id='findNext', style={
+                'width': 80, 'height': 25, 'margin': 10, 'fontSize': 16})
+])
+
+
+xAxis = html.Div(id='xAxisDropdownContainer', style=Styles.AxisDropdown, children=[
+                 xAxisText, xAxis_dropdown_3D])
+yAxis = html.Div(id='yAxisDropdownContainer', style=Styles.AxisDropdown, children=[
+                 yAxisText, yAxis_dropdown_3D])
+zAxis = html.Div(id='zAxisDropdownContainer', style=Styles.AxisDropdown, children=[
+                 zAxisText, zAxis_dropdown_3D])
+
+labelTitle = dcc.Markdown("Manually Label Faults", style={
+                          'height': '20%', 'fontSize': 24, 'fontWeight': 'bold'})
+
+# Box 5
+Box5text = dcc.Markdown('Statistics', style={
+    'fontSize': 26, 'fontWeight': 'bold', 'textAlign': 'center', })
+
+Box6text = dcc.Markdown('Export File to CSV', style={
+                        'fontSize': 26, 'fontWeight': 'bold', 'textAlign': 'center', })
+
+downloadData = dcc.Download(id="downloadData")
+
+dcc.Upload(children='Click to upload data', multiple=False, style={
+    'width': '100%',
+    'height': '60px',
+    'lineHeight': '60px',
+    'borderWidth': '1px',
+    'borderStyle': 'dashed',
+    'borderRadius': '5px',
+    'textAlign': 'center',
+    'margin': '10px'},)

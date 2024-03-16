@@ -40,7 +40,8 @@ from AutoLabellingFunctions import performKMeans, performPCA, performDBSCAN, per
 data = pd.DataFrame()
 # Create sample data
 comments = pd.DataFrame({})
-
+classifierNeuralNetwork = 0
+autoencoderNeuralNetwork = 0
 
 # 0 for non label, -1 for no fault, 2 for fault 1, 2 for fault 3 etc
 # data['labels'] = [0]
@@ -228,6 +229,41 @@ app.layout = html.Div(style={'background': 'linear-gradient(to bottom, blue, #00
                 dcc.Input(type='number', id='reducedSize', style={
                     'align-self': 'center', 'width': '100%', 'height': '90%', 'fontSize': 20})
             ]),
+            html.Div(id='autoencoderContainer', style={'display': 'flex', 'flex-direction': 'row', 'width': '100%', 'justify-content': 'space-evenly'}, children=[
+                html.Button(
+                    id='useLastAutoencoder',
+                    children='Use the most recently trained neural network',
+
+                    style={
+                        'display': 'block',
+
+                        'height': '60px',
+                        'lineHeight': '60px',
+                        'borderWidth': '1px',
+                        'borderStyle': 'dashed',
+                        'borderRadius': '5px',
+                        'textAlign': 'center',
+                        'margin': '0px'
+                    },
+                ),
+
+                dcc.Upload(
+                    id='uploadNewAutoencoder',
+                    children='Select data to train a new network',
+
+                    style={
+                        'display': 'block',
+
+                        'height': '60px',
+                        'lineHeight': '60px',
+                        'borderWidth': '1px',
+                        'borderStyle': 'dashed',
+                        'borderRadius': '5px',
+                        'textAlign': 'center',
+                        'margin': '0px'
+                    },
+                ),
+            ]),
 
 
             dcc.Markdown('Clustering: ', style={
@@ -248,42 +284,38 @@ app.layout = html.Div(style={'background': 'linear-gradient(to bottom, blue, #00
                 dcc.Input(type='number', id='K', value=3, style={
                     'align-self': 'center', 'width': '100%', 'height': '90%', 'fontSize': 20})
             ]),
+            html.Div(id='neuralnetworkContainer', style={'display': 'flex', 'flex-direction': 'row', 'width': '100%', 'justify-content': 'space-evenly'}, children=[
+                html.Button(
+                    id='useLastNetwork',
+                    children='Use the most recently trained neural network',
 
-            html.Button(
-                id='useLastNetwork',
-                children='Use the most recent neural network',
+                    style={
+                        'display': 'block',
+                        'height': '60px',
+                        'lineHeight': '60px',
+                        'borderWidth': '1px',
+                        'borderStyle': 'dashed',
+                        'borderRadius': '5px',
+                        'textAlign': 'center',
+                    },
+                ),
 
-                style={
-                    'display': 'block',
-                    'width': '100%',
-                    'height': '60px',
-                    'lineHeight': '60px',
-                    'borderWidth': '1px',
-                    'borderStyle': 'dashed',
-                    'borderRadius': '5px',
-                    'textAlign': 'center',
-                    'margin': '10px'
-                },
-            ),
+                dcc.Upload(
+                    id='uploadTrainingData',
+                    children='Select data to train a new neural network',
 
-            dcc.Upload(
-                id='uploadTrainingData',
-                children='Click to upload training data',
+                    style={
+                        'display': 'block',
+                        'height': '60px',
+                        'lineHeight': '60px',
+                        'borderWidth': '1px',
+                        'borderStyle': 'dashed',
+                        'borderRadius': '5px',
+                        'textAlign': 'center',
+                    },
 
-                style={
-                    'display': 'block',
-                    'width': '100%',
-                    'height': '60px',
-                    'lineHeight': '60px',
-                    'borderWidth': '1px',
-                    'borderStyle': 'dashed',
-                    'borderRadius': '5px',
-                    'textAlign': 'center',
-                    'margin': '10px'
-                },
-
-                multiple=True
-            ),
+                    multiple=True
+                ),]),
 
             html.Div(id='epsilon', style={'display': 'flex'}, children=[
                 dcc.Markdown('Epsilon:',  style={

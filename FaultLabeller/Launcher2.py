@@ -1,0 +1,1419 @@
+# FAULT DETECTION AND LABELLING TOOL
+# Sean Doherty, 202013008
+# 4th Year Project
+
+# IMPORTS
+# External Libraries for UI
+import dash
+from dash import html, dcc, Input, Output, State
+import plotly.express as px
+import plotly.graph_objs as go
+import pandas as pd
+from dash.exceptions import PreventUpdate
+import numpy as np
+
+# External Libraries for ML
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import OneHotEncoder
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense
+import pandas as pd
+import tensorflow as tf
+
+# Other Libraries
+import time
+import datetime
+import io
+import base64
+
+# Internal Libraries
+from AutoLabellingFunctions import performKMeans, performPCA, performDBSCAN, findKneePoint, createAutoencoder
+import Styles
+import Components
+
+# Global Variables
+data = pd.DataFrame()
+comments = pd.DataFrame()
+classifierNeuralNetwork = tf.keras.models.load_model("multiclassNeuralNetwork")
+autoencoderNeuralNetwork = tf.keras.models.load_model("autoencoder")
+shapes = []  # An array which stores rectangles, to visualise labels in the time domain
+navigationPoint = 0  # current navigation point
+clickedPoint = None  # The current clicked point
+
+x_0 = 0  # What proportion of the time graph is shown
+x_1 = 5000
+
+# START APP
+app = dash.Dash(__name__)
+
+# Define the layout
+app.layout = html.Div(style=Styles.window, children=[
+
+    # MODALS
+    Components.commentModal,
+    Components.alert1container,
+    Components.alert2container,
+
+    # CONTENTS
+    Components.title,
+    Components.topBox,
+
+    # BOTTOM BOXES
+    html.Div(style=Styles.bottomBoxes, children=[
+        # Box 1: Variables to Plot
+        html.Div(style=Styles.Box1,
+                 children=[
+                     Components.sensorHeader,
+                     Components.sensorText,
+                     Components.sensorDropdown,
+                     Components.xAxis,
+                     Components.yAxis,
+                     Components.zAxis
+
+                 ]),
+
+        html.Div(style=Styles.column, children=[
+            #  Box 2: Manual Label
+            html.Div(style=Styles.Box2, children=[
+                html.Div(style=Styles.Box2Container, children=[
+                    Components.labelTitle,
+                    Components.labelDropdown,
+                    html.Button(id='labelButton', style=Styles.labelButton),
+                    html.Button('Remove Labels', id='removeLabels',
+                                style=Styles.removeLabels),
+                ])]),
+
+            html.Div(style=Styles.emptySpace),
+
+            #  Box 3: Navigation
+            html.Div(style=Styles.Box3, children=[
+                # html.Div(style=Styles.Box3Container, children=[
+                Components.navigatorTitle,
+                html.Div(style=Styles.Box3Container2, children=[
+                    Components.navigationText,
+                    Components.faultFinder,
+                ]),
+                Components.navigationButtons
+            ])
+        ]),
+
+        # Box 4: Auto Labelling
+        html.Div(style=Styles.Box4, children=[
+            Components.AI_header,
+            Components.AI_text1,
+            Components.AI_text2,
+            Components.AI_text3,
+            Components.AI_selectButtons,
+            Components.AI_sensorChecklist,
+            Components.AI_text4,
+            Components.AI_text5,
+
+            html.Div(style=Styles.flex, children=[
+                Components.AI_text6,
+                Components.reductionMethod
+            ]),
+            html.Div(style=Styles.flex, children=[
+                Components.AI_text7,
+                Components.reducedSize
+
+            ]),
+            Components.uploadNewAutoencoder,
+            Components.AI_text8,
+            Components.AI_text9,
+
+            html.Div(style=Styles.flex, children=[
+                Components.AI_text10,
+                Components.clusterMethod,
+            ]),
+
+            html.Div(style=Styles.flex, children=[
+                Components.AI_text11,
+                Components.K
+            ]),
+
+            Components.uploadTrainingData,
+            html.Div(id='epsilon', style=Styles.flex, children=[
+                Components.AI_text12,
+                html.Div(style=Styles.slider, children=[
+                    Components.epsSlider
+                ])
+            ]),
+            html.Div(id='minVal', style=Styles.flex, children=[
+                Components.AI_text13,
+                html.Div(style=Styles.slider, children=[
+                    Components.minPtsSlider
+                ]),
+            ]),
+            html.Button(children='Start Clustering',
+                        id='startAutoLabel', style=Styles.startButton)
+        ]),
+
+        #    Box 5: Stats
+        html.Div(style=Styles.Box5, children=[
+            html.Div(style=Styles.Box5Container,  children=[
+                Components.Box5text,
+                Components.stat1, Components.stat2, Components.stat3,
+            ]
+            ),
+            html.Div(style=Styles.emptySpace),
+
+            # Box 6: Import and export
+            html.Div(style=Styles.Box6, children=[
+                html.Div(style=Styles.Box6Container, children=[
+                    Components.Box6text,
+                    html.Div(style=Styles.Box6Container2, children=[
+                        Components.exportName,
+                        Components.exportConfirm]),
+                    Components.downloadData,
+                    Components.uploadData,
+                ])
+            ])
+        ]),
+    ]),
+])
+
+
+# This function limits sensors to 4 at a time
+@app.callback(
+    Output(Components.sensorDropdown, 'value', allow_duplicate=True),
+    Input(Components.sensorDropdown, 'value'),
+    prevent_initial_call=True
+)
+def limitSensor(values):
+
+    if (values == None):
+        return [data.columns[0]]
+    if (len(values) > 4):
+        values = values[1:]
+
+    return values
+
+
+# This function exports data to a downloadable csv
+@app.callback(
+    Output('downloadData', 'data'),
+    Input(Components.exportConfirm, 'n_clicks'),
+    State(Components.exportName, 'value')
+)
+def exportCSV(exportClicked, fileName):
+    if exportClicked is None:
+        raise PreventUpdate
+
+    # Remove undesired data
+    exportData = data.drop(columns=['clusterLabels'])
+    exportData = exportData.rename(columns={'labels': 'correctLabels'})
+    exportData['commentMessage'] = comments.loc[:, 'commentMessage']
+    exportData['commentTime'] = comments.loc[:, 'commentTime']
+    exportData['commentUser'] = comments.loc[:, 'commentUser']
+
+    exportData.to_csv(fileName+'.csv', index=False)
+    return dcc.send_file(fileName+'.csv')
+
+#  This function uploads data to the dashboard
+
+
+@app.callback(Output(Components.title, 'children'),
+              Output(Components.sensorDropdown,
+                     'options', allow_duplicate=True),
+              Output(Components.sensorDropdown, 'value'),
+              Output('sensor-checklist', 'options', allow_duplicate=True),
+              Output('mainGraph', 'figure', allow_duplicate=True),
+              Output(Components.xAxis_dropdown_3D, 'value'),
+              Output(Components.xAxis_dropdown_3D, 'options'),
+              Output(Components.yAxis_dropdown_3D, 'value'),
+              Output(Components.yAxis_dropdown_3D, 'options'),
+              Output(Components.zAxis_dropdown_3D, 'value'),
+              Output(Components.zAxis_dropdown_3D, 'options'),
+              Input(Components.uploadData, 'contents'),
+              Input(Components.uploadData, 'filename'),
+              prevent_initial_call=True,)
+def uploadData(contents, filename):
+    global data
+    global shapes
+    global x_0
+    global x_1
+    global comments
+
+    if contents is not None:
+        content_type, content_string = contents.split(',')
+        decoded = io.StringIO(base64.b64decode(content_string).decode('utf-8'))
+        data = pd.read_csv(decoded)
+
+        comments = pd.DataFrame()
+
+        # Remove unwanted data
+        if 'commentMessage' in data.columns and 'commentTime' in data.columns and 'commentUser' in data.columns:
+            comments['commentTime'] = data.loc[:, 'commentTime']
+            comments['commentUser'] = data.loc[:, 'commentUser']
+            comments['commentMessage'] = data.loc[:, 'commentMessage']
+            data.drop(columns=['commentMessage', 'commentUser',
+                      'commentTime'], inplace=True)
+
+        if 'Unnamed: 0' in data.columns:
+            data = data.rename(columns={'Unnamed: 0': 'Time'})
+
+        if 'correctLabels' in data.columns:
+            data = data.rename(columns={'correctLabels': 'labels'})
+        else:
+            data['labels'] = data['labels'] = [0]*data.shape[0]
+
+        data['clusterLabels'] = [0]*data.shape[0]
+
+        sensors = data.columns[1:len(data.columns)-2]
+        x_0 = 0
+        x_1 = data.shape[0]
+
+        layout = go.Layout(xaxis=dict(range=[x_0, x_1]))
+
+        return 'Fault Labelling: ' + filename, sensors, [sensors[0]], sensors, {'layout': layout}, sensors[0], sensors, sensors[1], sensors, sensors[2], sensors
+    else:
+        raise PreventUpdate
+
+
+# This function updates the neural network with new training data
+@app.callback(Output('mainGraph', 'figure', allow_duplicate=True),
+              Input(Components.uploadTrainingData, 'contents'),
+              prevent_initial_call=True
+              )
+def updateNeuralNetwork(contents):
+    global classifierNeuralNetwork
+    trainingData = pd.DataFrame()
+
+    if contents is not None:
+        for i in range(0, len(contents)):
+            content_type, content_string = contents[i].split(',')
+            decoded = io.StringIO(base64.b64decode(
+                content_string).decode('utf-8'))
+
+            trainingData = trainingData._append(pd.read_csv(decoded))
+
+        if 'commentMessage' in trainingData.columns and 'commentTime' in trainingData.columns and 'commentUser' in trainingData.columns:
+            trainingData.drop(
+                columns=['commentMessage', 'commentTime', 'commentUser'], inplace=True)
+
+        if 'Unnamed: 0' in trainingData.columns:
+            trainingData.drop(columns=['Unnamed: 0'], inplace=True)
+
+        if 'Time' in trainingData.columns:
+            trainingData.drop(columns=['Time'], inplace=True)
+
+        X = trainingData.iloc[:, :-1]
+        y = trainingData.iloc[:, -1]
+        print(X.shape)
+        print(y.shape)
+        y = np.array(y)
+
+        inputSize = X.shape[1]
+        outputSize = len(set(y))
+
+        # One-hot encode the target labels
+        encoder = OneHotEncoder(sparse=False)
+        y = encoder.fit_transform(y.reshape(-1, 1))
+
+        # Split the dataset into training and testing sets
+        X_train, X_test, y_train, y_test = train_test_split(
+            X, y, test_size=0.2, random_state=42)
+
+        # Define the model
+        model = Sequential([
+            Dense(64, activation='relu', input_shape=(
+                inputSize,)),  # 4 input features
+            Dense(32, activation='relu'),
+            Dense(16, activation='relu'),  # Input layer with 52 neurons
+            # Output layer with 3 units for 3 classes
+            Dense(outputSize, activation='softmax')
+        ])
+
+        # Compile the model
+        model.compile(optimizer='adam',  # Use categorical crossentropy for one-hot encoded labels
+                      loss='categorical_crossentropy',
+                      metrics=['accuracy'])
+        # Train the model
+        model.fit(X_train, y_train, epochs=50, batch_size=32,
+                  validation_data=(X_test, y_test))
+
+        model.save("multiclassNeuralNetwork")
+        classifierNeuralNetwork = model
+
+    raise PreventUpdate
+
+# This function trains the autoencoder
+
+
+@app.callback(Output('mainGraph', 'figure'),
+              Input(Components.uploadNewAutoencoder, 'contents'),
+              prevent_initial_call=True
+              )
+def updateAutoencoder(contents):
+    global autoencoderNeuralNetwork
+
+    if contents is not None:
+        content_type, content_string = contents.split(',')
+        decoded = io.StringIO(base64.b64decode(content_string).decode('utf-8'))
+
+        trainingData = pd.read_csv(decoded)
+
+        if 'commentMessage' in trainingData.columns and 'commentTime' in trainingData.columns and 'commentUser' in trainingData.columns:
+            trainingData.drop(
+                columns=['commentMessage', 'commentTime', 'commentUser'], inplace=True)
+
+        if 'Unnamed: 0' in trainingData.columns:
+            trainingData.drop(columns=['Unnamed: 0'], inplace=True)
+
+        if 'Time' in trainingData.columns:
+            trainingData.drop(columns=['Time'], inplace=True)
+
+        if 'labels' in trainingData.columns:
+            trainingData.drop(columns=['labels'], inplace=True)
+
+        if 'correctLabels' in trainingData.columns:
+            trainingData.drop(columns=['correctLabels'], inplace=True)
+
+        autoencoder = createAutoencoder(trainingData)
+
+        autoencoder.save("multiclassNeuralNetwork")
+        autoencoderNeuralNetwork = autoencoder
+
+    raise PreventUpdate
+
+
+# This function display the dropdowns for colouring the data after the data has been autolabelled
+@app.callback(
+    Output('ClusterColourContainer', 'children'),
+    Input('startAutoLabel', 'n_clicks'),
+)
+def autoLabelOptions(startAutoLabelClicks):
+
+    if startAutoLabelClicks == None:
+        raise PreventUpdate
+    dropdowns = []
+
+    if 'clusterLabels' in data.columns:
+        for i in range(len(set(data['clusterLabels']))):
+
+            dropdowns.append(
+                dcc.Markdown('Area ' + str(i+1))
+            )
+            dropdowns.append(
+                dcc.Dropdown(
+                    style={'display': 'block', 'width': 200,
+                           'background-color': Styles.greyColours[i][0]},
+                    id=f'dropdown-{i}',
+                    options=[
+                        {'label': 'No Fault (Green)', 'value': 1},
+                        {'label': 'Fault 1 (Red)', 'value': 2},
+                        {'label': 'Fault 2 (Orange)', 'value': 3},
+                        {'label': 'Fault 3 (Yellow)', 'value': 4},
+                        {'label': 'Fault 4 (Pink)', 'value': 5},
+                        {'label': 'Fault 5 (Purple)', 'value': 6},
+                        {'label': 'Fault 6 (Lavender)', 'value': 7},
+                        {'label': 'Fault 7 (Blue)', 'value': 8},
+                        {'label': 'Fault 8 (Brown)', 'value': 9},
+                        {'label': 'Fault 9 (Cyan)', 'value': 10}
+                    ]
+                )
+            )
+    if 'clusterLabels' in data.columns:
+        for i in range(len(set(data['clusterLabels'])), 11):
+            dropdowns.append(
+                dcc.Markdown('Area ' + str(i+1), style={'display': 'none'},)
+            )
+            dropdowns.append(
+                dcc.Dropdown(
+                    style={'display': 'none'},
+                    id=f'dropdown-{i}',
+
+                    options=[]
+                )
+            )
+    dropdowns.append(
+        html.Button('Confirm Labels', id='colorNow', style={
+                    'fontSize': 20, 'align-self': 'center', 'font-weight': 'bold', 'margin': 20})
+    )
+
+    return dropdowns
+
+
+# This function colours the graph with the users labels
+@app.callback(
+    Output('colorNow', 'n_clicks'),
+    Output('ClusterColourContainer', 'style', allow_duplicate=True),
+    Output('alert2div', 'style', allow_duplicate=True),
+    Output('alert2', 'children', allow_duplicate=True),
+    Input('colorNow', 'n_clicks'),
+    State('dropdown-0', 'value'),
+    State('dropdown-1', 'value'),
+    State('dropdown-2', 'value'),
+    State('dropdown-3', 'value'),
+    State('dropdown-4', 'value'),
+    State('dropdown-5', 'value'),
+    State('dropdown-6', 'value'),
+    State('dropdown-7', 'value'),
+    State('dropdown-8', 'value'),
+    State('dropdown-9', 'value'),
+    State('mainGraph', 'figure'),
+    State('mainGraph', 'relayoutData'),
+    State('switchView', 'n_clicks'),
+    State('alert2div', 'style'),
+    prevent_initial_call=True,
+)
+def colorLabels(colorNow, area0, area1, area2, area3, area4, area5, area6, area7, area8, area9, figure, relayoutData, switchView, alert2div):
+
+    if colorNow == None or colorNow == 0:
+        raise PreventUpdate
+    else:
+
+        global x_0
+        global x_1
+        alert2div['display'] = 'none'
+        alertMessage = ''
+        if (switchView is None):
+            switchView = 0
+        areas = [area0, area1, area2, area3, area4,
+                 area5, area6, area7, area8, area9]
+
+        ClusterColourContainer = {'display': 'none'}
+
+        for i in range(len(set(data['clusterLabels']))):
+            if areas[i] == None:
+
+                alert2div['display'] = 'flex'
+                alertMessage = 'Not all dropdowns were full. Labelling may be wrong.'
+
+        for i in range(len(data['labels'])):
+            for j in range(len(areas)):
+                if j == data['clusterLabels'][i]:
+                    if areas[j] == None:
+                        data.loc[i, 'labels'] = 0
+                    else:
+                        data.loc[i, 'labels'] = areas[j]
+
+        data['clusterLabels'] = [0]*data.shape[0]
+        ClusterColourContainer = {'display': 'none'}
+
+        return 0, ClusterColourContainer, alert2div, alertMessage
+
+# This function closes the alerts
+
+
+@app.callback(
+    Output('alert1div', 'style', allow_duplicate=True),
+    Output('alert2div', 'style', allow_duplicate=True),
+    Output('closeAlert1', 'n_clicks'),
+    Output('closeAlert2', 'n_clicks'),
+    Input('closeAlert1', 'n_clicks'),
+    Input('closeAlert2', 'n_clicks'),
+    State('alert1div', 'style'),
+    State('alert2div', 'style'),
+    prevent_initial_call=True
+)
+def closeAlerts(alert1click, alert2click, alert1style, alert2style):
+    if alert1click == None:
+        alert1click = 0
+    if alert2click == None:
+        alert2click = 0
+
+    if alert1click == 1:
+        alert1style['display'] = 'None'
+
+    if alert2click == 1:
+        alert2style['display'] = 'None'
+
+    return alert1style, alert2style, 0, 0
+
+# This callback tells the user what data point has been clicked
+
+
+@app.callback(
+    Output('alert1div', 'style', allow_duplicate=True),
+    Output('alert1', 'children'),
+    [Input('mainGraph', 'clickData')],
+    State('switchView', 'n_clicks'),
+    State('alert1div', 'style'),
+    State('alert1', 'children'),
+    prevent_initial_call=True
+)
+def update_textbox(click_data, switchViewClicks, alertstyle, alert):
+    if (switchViewClicks == None):
+        switchViewClicks = 0
+
+    if click_data is None:
+        raise PreventUpdate
+    alertstyle['style'] = 'none'
+    labels = ['Unlabelled', 'No Fault', 'Fault 1', 'Fault 2', 'Fault 3',
+              'Fault 4', 'Fault 5', 'Fault 6', 'Fault 7', 'Fault 8', 'Fault 9', 'Fault 10']
+
+    clickedPoint = round(click_data['points'][0]['pointNumber'])
+    label = data['labels'][clickedPoint]
+    alertstyle['display'] = 'flex'
+    alert = 'This point (t = ' + str(clickedPoint) + \
+        ') is labelled as ', str(labels[label])
+
+    return alertstyle, alert
+
+
+#  This function updates which sensors are used for auto-labelling
+@app.callback(
+    Output('sensor-checklist', 'value', allow_duplicate=True),
+    Output('select-all', 'n_clicks'),
+    Output('deselect-all', 'n_clicks'),
+    Output('graphSensors', 'n_clicks'),
+    Input('select-all', 'n_clicks'),
+    Input('deselect-all', 'n_clicks'),
+    Input('graphSensors', 'n_clicks'),
+    State(Components.sensorDropdown, 'value'),
+    State('switchView', 'n_clicks'),
+    State(Components.xAxis_dropdown_3D, 'value'),
+    State(Components.yAxis_dropdown_3D, 'value'),
+    State(Components.zAxis_dropdown_3D, 'value'),
+    prevent_initial_call=True
+)
+def selectDeselectAll(selectClicks, deselectClicks, graphSensors, sensorDropdown, switchView, xAxis_dropdown_3D, yAxis_dropdown_3D, zAxis_dropdown_3D):
+    print('got here')
+    if selectClicks == None:
+        selectClicks = 0
+    if deselectClicks == None:
+        deselectClicks = 0
+    if switchView == None:
+        switchView = 0
+
+    if selectClicks == 1:
+
+        return data.columns[1:], 0, 0, 0
+    elif deselectClicks == 1:
+        return [], 0, 0, 0
+    elif graphSensors == 1:
+        if (switchView % 3 == 0):
+            return sensorDropdown, 0, 0, 0
+        elif (switchView % 3 == 1):
+            return [xAxis_dropdown_3D, yAxis_dropdown_3D], 0, 0, 0
+        elif (switchView % 3 == 2):
+            return [xAxis_dropdown_3D, yAxis_dropdown_3D, zAxis_dropdown_3D], 0, 0, 0
+    else:
+        raise PreventUpdate
+
+
+#  This function shows and hides clustering paratmeters
+@app.callback(
+    Output(Components.K, 'style'),
+    Output('reducedSize', 'style'),
+    Output('reducedSizeMarkdown', 'style'),
+    Output('kMeansMarkdown', 'style'),
+    Output('epsilon', 'style'),
+    Output('minVal', 'style'),
+    Output(Components.uploadTrainingData, 'style'),
+    Output('sensor-checklist', 'value', allow_duplicate=True),
+    Output(Components.uploadNewAutoencoder, 'style'),
+
+    Input(Components.clusterMethod, 'value'),
+    Input(Components.reductionMethod, 'value'),
+    Input('switchView', 'n_clicks'),
+    State(Components.uploadTrainingData, 'style'),
+    State('sensor-checklist', 'value'),
+    State('sensor-checklist', 'options'),
+    State(Components.uploadNewAutoencoder, 'style'),
+    prevent_initial_call=True
+)
+def autoLabelStyles(clusterMethod, reductionMethod, switchView, uploadTrainingData, sensorChecklistValues, sensorChecklistOptions, uploadNewAutoencoder):
+
+    print('got here 2')
+    K_style = {'display': 'none'}
+    kMeansMarkdown = {'display': 'none'}
+    reducedStyle_style = {'display': 'none'}
+    reducedSizeMarkdown = {'display': 'none'}
+    epsStyle = {'display': 'none'}
+    minValStyle = {'display': 'none'}
+    uploadTrainingData['display'] = 'none'
+    uploadNewAutoencoder['display'] = 'none'
+
+    global data
+    if data.empty:
+        raise PreventUpdate
+
+    if switchView == None:
+        switchView = 0
+
+    if (clusterMethod == 'K Means'):
+        K_style = {'display': 'block', 'align-self': 'center',
+                   'width': '100%', 'height': '90%', 'fontSize': 20}
+        kMeansMarkdown = {'display': 'block',
+                          'margin-left': 10, 'width': '50%'}
+
+    if (clusterMethod == 'DBSCAN'):
+        epsStyle = {'display': 'flex'}
+        minValStyle = {'display': 'flex'}
+
+    if (clusterMethod == 'Neural Network (Supervised)'):
+        uploadTrainingData['display'] = 'none'
+        sensorChecklistValues = sensorChecklistOptions
+
+    if (reductionMethod == 'PCA'):
+        reducedStyle_style = {'display': 'block', 'align-self': 'center',
+                              'width': '100%', 'height': '90%', 'fontSize': 20}
+        reducedSizeMarkdown = {'display': 'block',
+                               'margin-left': 10, 'width': '50%'}
+
+    if (reductionMethod == 'Auto-encoding'):
+        sensorChecklistValues = sensorChecklistOptions
+        uploadNewAutoencoder['display'] = 'block'
+
+    return K_style, reducedStyle_style, reducedSizeMarkdown, kMeansMarkdown, epsStyle, minValStyle, uploadTrainingData, sensorChecklistValues, uploadNewAutoencoder
+
+# This function finds the optimal value of minPts and epsilon, dependent on the user selected parameters
+
+
+@app.callback(
+    Output(Components.minPtsSlider, 'value'),
+    Output(Components.epsSlider, 'value'),
+    Input(Components.clusterMethod, 'value'),
+    Input('sensor-checklist', 'value'),
+    Input('reducedSize', 'value'),
+    Input(Components.reductionMethod, 'value')
+
+)
+def DBSCAN_parameterSelection(clusterMethod, sensorChecklist, reducedSize, reductionMethod):
+
+    if clusterMethod == 'DBSCAN' and sensorChecklist != []:
+        df = data.loc[:, sensorChecklist]
+        if reductionMethod == 'PCA':
+            if reducedSize != None:
+                df = performPCA(df, reducedSize)
+        elif reductionMethod == 'Auto-encoding':
+            # df = performAutoEncoding(df)
+            print('COME BACK')
+
+        n = len(df.columns)
+        eps = findKneePoint(df, n + 1)
+
+        return n+1, eps
+    else:
+        raise PreventUpdate
+
+# This function adds comments
+
+
+@app.callback(
+    Output("commentModal", "style"),
+    Output("commentModal", 'children'),
+    Output("addComment", "n_clicks"),
+    Output('closeComments', 'n_clicks'),
+
+    Input("open-modal", "n_clicks"),
+    Input('closeComments', 'n_clicks'),
+    Input("addComment", "n_clicks"),
+    State("commentInput", 'value'),
+    State("usernameInput", 'value'),
+    State("commentModal", "style"),
+)
+def toggle_modal(openModal, closeModal, addComments, commentInput, usernameInput, commentModalStyle):
+
+    if openModal == 1:
+        commentModalStyle['display'] = 'block'
+    if closeModal == 1:
+        commentModalStyle['display'] = 'none'
+
+    global comments
+    time = datetime.datetime.now().strftime("%H:%M")
+
+    if (addComments == 1):
+        comments = comments._append({'commentTime': time,
+                                     'commentUser': usernameInput, 'commentMessage': commentInput}, ignore_index=True)
+
+    modalChidren = [
+        html.Div(style={'position': 'relative'}, children=[
+            dcc.Markdown("Comments", style={
+                         'fontWeight': 'bold', 'fontSize': 20}),
+            html.Button("X", id='closeComments', style={'position': 'absolute', 'right': 10, 'top': 10})]
+        )]
+
+    for i in range(comments.shape[0]):
+        modalChidren.append(
+            html.Div(style={'flex-direction': 'row', 'display': 'flex', 'justify-content': 'space-evenly'},  children=[
+                dcc.Markdown(comments.iloc[i, 0], style={'width': '25%'}),
+                dcc.Markdown(comments.iloc[i, 1], style={'width': '25%'}),
+                dcc.Markdown(comments.iloc[i, 2], style={'width': '50%'}),
+            ]),)
+
+    modalChidren.append(html.Div(
+        html.Div(children=[
+            dcc.Input(id='commentInput', type='text', value='Comment'),
+            dcc.Input(id='usernameInput', type='text', value='Name'),
+            html.Button("Add Comment", id='addComment')]
+        ),
+    ),)
+
+    return commentModalStyle, modalChidren, 0, 0
+
+
+# This function performs the bulk of functionality: everything that uses the main graph as an output do with main graph
+@app.callback(
+    Output('mainGraph', 'figure', allow_duplicate=True),
+    Output('labelButton', 'children'),
+    Output('removeLabels', 'n_clicks'),
+    Output('findPrev', 'n_clicks'),
+    Output('findNext', 'n_clicks'),
+    Output(Components.stat1, 'children'),
+    Output(Components.stat2, 'children'),
+    Output(Components.stat3, 'children'),
+    Output('alert2div', 'style', allow_duplicate=True),
+    Output('alert2', 'children', allow_duplicate=True),
+    Output(Components.sensorDropdown, 'style'),
+    Output('startAutoLabel', 'n_clicks'),
+    Output('ClusterColourContainer', 'style'),
+    Output('xAxisDropdownContainer', 'style'),
+    Output('yAxisDropdownContainer', 'style'),
+    Output('zAxisDropdownContainer', 'style'),
+
+    Input(Components.sensorDropdown, 'value'),
+    State(Components.labelDropdown, 'value'),
+    Input('switchView', 'n_clicks'),
+    Input('labelButton', 'n_clicks'),
+    Input('removeLabels', 'n_clicks'),
+    Input('findPrev', 'n_clicks'),
+    Input('findNext', 'n_clicks'),
+    Input(Components.faultFinder, 'value'),
+    Input('mainGraph', 'clickData'),
+    Input(Components.xAxis_dropdown_3D, 'value'),
+    Input(Components.yAxis_dropdown_3D, 'value'),
+    Input(Components.zAxis_dropdown_3D, 'value'),
+    Input('startAutoLabel', 'n_clicks'),
+    Input('colorNow', 'n_clicks'),
+    Input('switchRepresentation', 'n_clicks'),
+
+    State('sensor-checklist', 'value'),
+    State(Components.clusterMethod, 'value'),
+    State(Components.reductionMethod, 'value'),
+    State('mainGraph', 'relayoutData'),
+    State(Components.K, 'value'),
+    State('reducedSize', 'value'),
+    State(Components.epsSlider, 'value'),
+    State(Components.minPtsSlider, 'value'),
+    State('alert2div', 'style'),
+    State('alert2', 'children'),
+    prevent_initial_call=True,
+
+)
+def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButtonClicks, removeLabelClick, findPrevClicked, findNextClicked, faultFinder, clickData, xAxis_dropdown_3D, yAxis_dropdown_3D, zAxis_dropdown_3D, newAutoLabel,  colorNow, switchRepresentation, sensorChecklist, clusterMethod, reductionMethod, relayoutData, K, reducedSize, eps, minVal, alert2div, alert2):
+
+    global shapes
+    global colours
+    global x_0
+    global x_1
+    global currentPoint
+    global clickedPoint
+    global classifierNeuralNetwork
+    global autoencoderNeuralNetwork
+    global data
+
+    start_time = time.time()
+
+    if data.empty:
+        raise PreventUpdate
+
+    # Set Buttons to 0
+    if (newAutoLabel == None):
+        newAutoLabel = 0
+    if (switchViewButtonClicks == None):
+        switchViewButtonClicks = 0
+
+    if (findNextClicked == None):
+        findNextClicked = 0
+
+    if (labelButtonClicks == None):
+        labelButtonClicks = 0
+
+    if (removeLabelClick == None):
+        removeLabelClick = 0
+
+    if (switchRepresentation == None):
+        switchRepresentation = 0
+
+    # Set default output values
+    labelButtonTitle = 'New Label'
+    ClusterColourContainer = {"display": "none"}
+    xAxis_dropdown_3D_style = {"display": "none"}
+    yAxis_dropdown_3D_style = {"display": "none"}
+    zAxis_dropdown_3D_style = {"display": "none"}
+    alert2div['display'] = 'none'
+
+    # Take note of initial x0 and x1 values
+    if relayoutData and 'xaxis.range[0]' in relayoutData.keys():
+        x_0 = relayoutData.get('xaxis.range[0]')
+        x_1 = relayoutData.get('xaxis.range[1]')
+
+    if (switchViewButtonClicks % 3 == 0):  # i.e. time graph
+
+        # ADD DATA
+        selectData = []
+        if sensorDropdown != None:
+            if sensorDropdown != []:
+                for i in range(len(sensorDropdown)):
+                    selectData.append(go.Scatter(
+                        y=data.loc[:, sensorDropdown[i]], name=sensorDropdown[i], yaxis='y' + str(i+1), opacity=1-0.2*i))
+
+        if clickData is not None and 'points' in clickData:
+            clickedPoint = clickData['points'][0]['x']
+ #
+        if (labelButtonClicks % 2 == 0):  # i.e. a label has been added
+
+            dragMode = 'pan'
+            if relayoutData is not None and 'selections' in relayoutData.keys():
+
+                x0 = relayoutData['selections'][0]['x0']
+                x1 = relayoutData['selections'][0]['x1']
+                x0 = round(x0)
+                x1 = round(x1)
+
+                if (x0 > x1):
+                    temp = x0
+                    x0 = x1
+                    x1 = temp
+
+                if (x0 < 0):
+                    x0 = 0
+                if (x1 > data.shape[0]):
+                    x1 = data.shape[0]
+
+                data['labels'][x0:x1] = [labelDropdown] * (x1-x0)
+
+        elif (labelButtonClicks % 2 == 1):   # i.e. a label is about to be added
+
+            dragMode = 'select'
+            labelButtonTitle = "Confirm Label"
+
+        if (findNextClicked == 1):  # i.e. user is navigating
+            target = 0
+            if (faultFinder == 'Unlabelled Data Point'):
+                target = 0
+            elif (faultFinder == 'No Fault'):
+                target = 1
+            elif (faultFinder == 'Fault 1'):
+                target = 2
+            elif (faultFinder == 'Fault 2'):
+                target = 3
+            elif (faultFinder == 'Fault 3'):
+                target = 4
+
+            if (int(currentPoint) == len(data['labels'])):
+                # Create an alert to informt that there are no furher ponts
+                alert2div['display'] = 'flex'
+                alert2 = 'You have reached the end of the data.'
+            else:
+                start = -1
+                end = -1
+                for i in range(int(currentPoint), len(data['labels'])):
+                    if (data['labels'][i] == target):
+                        start = i
+                        for j in range(i, len(data['labels'])):
+                            if (data['labels'][j] != target):
+                                end = j
+                                currentPoint = str(end)
+                                break
+                        if (end == -1):
+                            end = len(data['labels'])
+                            currentPoint = str(end)
+                        break
+                if (start == -1):
+                    # There is no exisiting label
+
+                    alert2div['display'] = 'flex'
+                    alert2 = 'No label exists.'
+                    x_0 = 0
+                    x_1 = data.shape[0]
+                else:
+                    x_0 = start - round((end-start)*0.2)
+                    x_1 = end + round((end-start)*0.2)
+
+        if (findPrevClicked == 1):  # ie. user is navgating back
+
+            if (faultFinder == 'Unlabelled Data Point'):
+                target = 0
+            elif (faultFinder == 'No Fault'):
+                target = 1
+            elif (faultFinder == 'Fault 1'):
+                target = 2
+            elif (faultFinder == 'Fault 2'):
+                target = 3
+            elif (faultFinder == 'Fault 3'):
+                target = 4
+
+            if (int(currentPoint) == 0):
+                # Create an alert to informt that there are no furher ponts
+                alert2div['display'] = 'flex'
+                alert2 = 'You have reached the start of the data'
+
+            else:
+                start = -1
+                end = -1
+
+                for i in range(int(currentPoint)-1, 0, -1):
+                    if (data['labels'][i] == target):
+                        end = i
+                        start = -1
+                        for j in range(i, 0, -1):
+                            if (data['labels'][j] != target):
+                                start = j
+                                currentPoint = str(start)
+                                break
+                        if (start == -1):
+                            start = 0
+                            currentPoint = str(start)
+                        break
+                if (end == -1):
+                    # There is no exisiting label
+                    alert2div['display'] = 'flex'
+                    alert2 = 'No label exists'
+                    x_0 = 0
+                    x_1 = data.shape[0]
+                else:
+                    x_0 = start - round((end-start)*0.2)
+                    x_1 = end + round((end-start)*0.2)
+
+        if (newAutoLabel == 1):  # i.e time to perform autoabelling
+
+            if (sensorChecklist == [] or sensorChecklist == None):
+                alert2div['display'] = 'flex'
+                alert2 = 'Select sensors for auto-detection.'
+            else:
+                df = data.loc[:, sensorChecklist]
+
+                if (reductionMethod == 'PCA'):
+                    if (reducedSize == None or reducedSize < 2):
+                        alert2div['display'] = 'flex'
+                        alert2 = 'Wrong value input for PCA. Data reduction has failed.'
+                    else:
+                        df = performPCA(df, reducedSize)
+
+                elif (reductionMethod == 'Auto-encoding'):
+
+                    latentSpace = autoencoderNeuralNetwork.predict(
+                        data.iloc[:, 1:-2])
+                    print(data.iloc[:, 1:-2])
+                    df = pd.DataFrame(data=latentSpace)
+
+                if (clusterMethod == 'K Means'):
+                    if (K == None or K < 0):
+                        alert2div['display'] = 'flex'
+                        alert2 = 'Wrong value input for K Means. Clustering has failed.'
+                    elif (K > 10 or K <= 1):
+                        alert2div['display'] = 'flex'
+                        alert2 = 'Select a value between 1 and 10 for K.'
+                    else:
+                        data['labels'] = [0]*data.shape[0]
+                        data['clusterLabels'] = performKMeans(df, K)
+                        ClusterColourContainer = {
+                            'display': 'block', 'width': 200, 'padding': 20}
+
+                elif (clusterMethod == 'DBSCAN'):
+                    if (eps == None or minVal == None):
+                        alert2div['display'] = 'flex'
+                        alert2 = 'Incorrect parameter for eps or min points.'
+                    else:
+
+                        n = len(sensorChecklist)
+                        temp = performDBSCAN(df, eps, minVal)
+                        if len(list(set(temp))) >= 10:
+                            alert2div['display'] = 'flex'
+                            alert2 = 'DBSCAN produced too many clusters. Try decreasing epsilon or increasing min points.'
+                        elif (len(list(set(temp))) == 1):
+                            alert2div['display'] = 'flex'
+                            alert2 = 'DBSCAN produced only outliers. Try increasing epsilon or decreasing min points.'
+                        else:
+                            data['labels'] = [0]*data.shape[0]
+                            data['clusterLabels'] = performDBSCAN(
+                                df, eps, minVal)
+                            ClusterColourContainer = {
+                                'display': 'block', 'width': 200, 'padding': 20}
+                elif (clusterMethod == 'Neural Network (Supervised)'):
+                    df = data.iloc[:, 1:-2]
+                    predictLabels = classifierNeuralNetwork.predict(df)
+
+                    # Round the highest value to 1 and all others to 0
+                    roundedLabels = np.zeros_like(predictLabels)
+                    roundedLabels[np.arange(len(predictLabels)),
+                                  predictLabels.argmax(axis=1)] = 1
+
+                    data['labels'] = np.argmax(roundedLabels, axis=1)
+
+                    for i in range(data.shape[0]):
+                        data.loc[i, 'labels'] += 1
+
+                    data['clusterLabels'] = [0]*data.shape[0]
+
+                x_0 = 0
+                x_1 = data.shape[0]
+
+        if (removeLabelClick == 1):
+            data['labels'] = [0]*data.shape[0]
+            data['clusterLabels'] = [0]*data.shape[0]
+
+        # Go through labels and shown all the shapes
+        shapes = []
+        x0 = 0
+        x1 = x0
+
+        if 'labels' in data.columns:
+            for i in range(1, len(data['labels'])):
+
+                if data['labels'][i] != data['labels'][i-1]:
+
+                    x1 = i
+
+                    shapes.append({
+                        'type': 'rect',
+                        'x0': x0,
+                        'x1': x1,
+                        'y0': 0,
+                        'y1': 0.05,
+                        'fillcolor': Styles.colours[int(data.loc[x0, 'labels'])][0],
+                        'yref': 'paper',
+                        'opacity': 1,
+                        'name': str(data['labels'][x0])
+                    },)
+
+                    x0 = i
+
+            shapes.append({
+                'type': 'rect',
+                'x0': x0,
+                'x1': len(data['labels']),
+                'y0': 0,
+                'y1': 0.05,
+                'fillcolor': Styles.colours[int(data.loc[x0, 'labels'])][0],
+                'yref': 'paper',
+                'opacity': 1,
+                'name': str(data['labels'][x0])
+            },)
+
+            if len(set(data['clusterLabels'])) != 1:
+                for i in range(1, len(data['clusterLabels'])):
+
+                    if data['clusterLabels'][i] != data['clusterLabels'][i-1]:
+
+                        x1 = i
+
+                        shapes.append({
+                            'type': 'rect',
+                            'x0': x0,
+                            'x1': x1,
+                            'y0': 0,
+                            'y1': 0.05,
+                            'fillcolor': Styles.greyColours[data['clusterLabels'][x0]][0],
+                            'yref': 'paper',
+                            'opacity': 0.9,
+                            'name': 'area'+str(data['clusterLabels'][x0])
+                        },)
+
+                        x0 = i
+
+                shapes.append({
+                    'type': 'rect',
+                    'x0': x0,
+                    'x1': len(data['labels']),
+                    'y0': 0,
+                    'y1': 0.05,
+                    'fillcolor': Styles.greyColours[data['clusterLabels'][x0]][0],
+                    'yref': 'paper',
+                    'opacity': 0.9,
+                    'name': 'area'+str(data['clusterLabels'][x0])
+                },)
+
+        layout = go.Layout(legend={'x': 0, 'y': 1.2}, xaxis=dict(range=[x_0, x_1]),  dragmode=dragMode, yaxis=dict(fixedrange=True, title='Sensor Value', color='blue'), yaxis2=dict(
+            fixedrange=True, overlaying='y', color='orange', side='right'), yaxis3=dict(fixedrange=True, overlaying='y', color='green', side='left', position=0.001,), yaxis4=dict(fixedrange=True, overlaying='y', color='red', side='right'), shapes=shapes)
+
+        if clickedPoint is not None:
+            selectData.append(
+                go.Line(x=[clickedPoint, clickedPoint], y=[0, data.loc[:, sensorDropdown[0]].max()], name='Selected Point', line=dict(color='black')))
+
+        fig = {'data': selectData, 'layout': layout, }
+
+        sensorDropdownStyle = {'display': 'block',
+                               'fontSize': 20, 'margin': 10}
+
+    if (switchViewButtonClicks % 3 == 1):  # i.e. 2D Scatter
+
+        xAxis_dropdown_3D_style = {"display": "flex"}
+        yAxis_dropdown_3D_style = {"display": "flex"}
+
+        sensorDropdownStyle = {'display': 'none'}
+
+        if clickData is not None and 'points' in clickData:
+
+            clickedPoint = clickData['points'][0]['pointNumber']
+
+        if (labelButtonClicks % 2 == 0):
+
+            dragMode = 'zoom'
+
+            if 'selections' in relayoutData.keys():
+
+                x0 = relayoutData['selections'][0]['x0']
+                x1 = relayoutData['selections'][0]['x1']
+                y0 = relayoutData['selections'][0]['y0']
+                y1 = relayoutData['selections'][0]['y1']
+
+                if (x0 > x1):
+                    temp = x0
+                    x0 = x1
+                    x1 = temp
+                if (y0 > y1):
+                    temp = y0
+                    y0 = y1
+                    y1 = temp
+
+                for label in range(len(data['labels'])):
+                    if data[xAxis_dropdown_3D][label] > x0 and data[xAxis_dropdown_3D][label] < x1 and data[yAxis_dropdown_3D][label] > y0 and data[yAxis_dropdown_3D][label] < y1:
+                        data.loc[label, 'labels'] = labelDropdown
+
+        else:
+
+            labelButtonTitle = 'Confirm Label'
+            dragMode = 'select'
+
+        if (newAutoLabel == 1):  # i.e time to perform autoabelling
+            selectData = []
+
+            if (sensorChecklist == [] or sensorChecklist == None):
+                alert2div['display'] = 'flex'
+                alert2 = 'Select sensors for auto-detection.'
+            else:
+                df = data.loc[:, sensorChecklist]
+
+                if (reductionMethod == 'PCA'):
+                    if (reducedSize == None or reducedSize < 2):
+                        alert2div['display'] = 'flex'
+                        alert2 = 'Wrong value input for PCA. Data reduction has failed.'
+                    else:
+                        df = performPCA(df, reducedSize)
+
+                elif (reductionMethod == 'Auto-encoding'):
+
+                    latentSpace = autoencoderNeuralNetwork.predict(
+                        data.iloc[:, 1:-2])
+                    print(data.iloc[:, 1:-2])
+                    df = pd.DataFrame(data=latentSpace)
+
+                if (clusterMethod == 'K Means'):
+                    if (K == None or K < 0):
+                        alert2div['display'] = 'flex'
+                        alert2 = 'Wrong value input for K Means. Clustering has failed.'
+                    elif (K > 10 or K <= 1):
+                        alert2div['display'] = 'flex'
+                        alert2 = 'Select a value between 1 and 10 for K.'
+                    else:
+                        data['labels'] = [0]*data.shape[0]
+                        data['clusterLabels'] = performKMeans(df, K)
+                        ClusterColourContainer = {
+                            'display': 'block', 'width': 200, 'padding': 20}
+
+                elif (clusterMethod == 'DBSCAN'):
+                    if (eps == None or minVal == None):
+                        alert2div['display'] = 'flex'
+                        alert2 = 'Incorrect parameter for eps or min points.'
+                    else:
+                        n = len(sensorChecklist)
+                        temp = performDBSCAN(df, eps, minVal)
+                        if len(list(set(temp))) >= 10:
+                            alert2div['display'] = 'flex'
+                            alert2 = 'DBSCAN produced too many clusters. Try decreasing epsilon or increasing min points.'
+                        elif (len(list(set(temp))) == 1):
+                            alert2div['display'] = 'flex'
+                            alert2 = 'DBSCAN produced only outliers. Try increasing epsilon or decreasing min points.'
+                        else:
+                            data['labels'] = [0]*data.shape[0]
+                            data['clusterLabels'] = performDBSCAN(
+                                df, eps, minVal)
+                            ClusterColourContainer = {
+                                'display': 'block', 'width': 200, 'padding': 20}
+                elif (clusterMethod == 'Neural Network (Supervised)'):
+                    df = data.iloc[:, 1:-2]
+                    predictLabels = classifierNeuralNetwork.predict(df)
+                    # Round the highest value to 1 and all others to 0
+                    roundedLabels = np.zeros_like(predictLabels)
+                    roundedLabels[np.arange(len(predictLabels)),
+                                  predictLabels.argmax(axis=1)] = 1
+
+                    data['labels'] = np.argmax(roundedLabels, axis=1)
+
+                    for i in range(data.shape[0]):
+                        # data.loc['labels', i] += 1
+                        data.loc[i, 'labels'] += 1
+
+                    data['clusterLabels'] = [0]*data.shape[0]
+
+                x_0 = 0
+                x_1 = data.shape[0]
+
+                selectData = [go.Scatter(
+                    y=data.loc[:, yAxis_dropdown_3D], x=data.loc[:,
+                                                                 xAxis_dropdown_3D], text=data.loc[:, 'clusterLabels'], mode='markers', marker={'color': [Styles.greyColours[val][0] for val in data['clusterLabels']], })]
+
+                if (clusterMethod == 'Neural Network (Supervised)'):
+                    selectData = [go.Scatter(
+                        y=data.loc[:, yAxis_dropdown_3D], x=data.loc[:,
+                                                                     xAxis_dropdown_3D], text=data.loc[:, 'labels'], mode='markers', marker={'color': [Styles.colours[val][0] for val in data['clusterLabels']], })]
+        else:
+            if (removeLabelClick == 1):
+                data['labels'] = [0]*data.shape[0]
+                data['clusterLabels'] = [0]*data.shape[0]
+            selectData = [go.Scatter(
+                y=data.loc[:, yAxis_dropdown_3D], x=data.loc[:,
+                                                             xAxis_dropdown_3D], text=data.loc[:, 'labels'], mode='markers', marker={'color': [Styles.colours[int(val)][0] for val in data['labels']], })]
+        layout = go.Layout(dragmode=dragMode, yaxis=dict(
+            title=yAxis_dropdown_3D), xaxis=dict(
+            title=xAxis_dropdown_3D))
+
+        fig = {'data': selectData, 'layout': layout}
+
+        if (switchRepresentation % 2 == 1):
+            fig = px.scatter(data, x=xAxis_dropdown_3D,
+                             y=yAxis_dropdown_3D, color='Time',)
+
+        if clickedPoint is not None:
+            selectData.append(go.Scatter(x=[data[xAxis_dropdown_3D][clickedPoint]], y=[
+                data[yAxis_dropdown_3D][clickedPoint]],  marker=dict(color='black')))
+
+    if (switchViewButtonClicks % 3 == 2):
+        #  3D SCATTER PLOT
+
+        xAxis_dropdown_3D_style = {"display": "flex"}
+        yAxis_dropdown_3D_style = {"display": "flex"}
+        zAxis_dropdown_3D_style = {"display": "flex"}
+
+        if clickData is not None and 'points' in clickData:
+
+            clickedPoint = clickData['points'][0]['pointNumber']
+
+        if (newAutoLabel == 1):
+
+            selectData = []
+
+            if (sensorChecklist == [] or sensorChecklist == None):
+                alert2div['display'] = 'flex'
+                alert2 = 'Select sensors for auto-detection.'
+            else:
+                df = data.loc[:, sensorChecklist]
+
+                if (reductionMethod == 'PCA'):
+                    if (reducedSize == None or reducedSize < 2):
+                        alert2div['display'] = 'flex'
+                        alert2 = 'Wrong value input for PCA. Data reduction has failed.'
+                    else:
+                        df = performPCA(df, reducedSize)
+
+                elif (reductionMethod == 'Auto-encoding'):
+
+                    latentSpace = autoencoderNeuralNetwork.predict(
+                        data.iloc[:, 1:-2])
+                    print(data.iloc[:, 1:-2])
+                    df = pd.DataFrame(data=latentSpace)
+
+                if (clusterMethod == 'K Means'):
+                    if (K == None or K < 0):
+                        alert2div['display'] = 'flex'
+                        alert2 = 'Wrong value input for K Means. Clustering has failed.'
+                    elif (K > 10 or K <= 1):
+                        alert2div['display'] = 'flex'
+                        alert2 = 'Select a value between 1 and 10 for K.'
+                    else:
+                        data['labels'] = [0]*data.shape[0]
+                        data['clusterLabels'] = performKMeans(df, K)
+                        ClusterColourContainer = {
+                            'display': 'block', 'width': 200, 'padding': 20}
+
+                elif (clusterMethod == 'DBSCAN'):
+                    if (eps == None or minVal == None):
+                        alert2div['display'] = 'flex'
+                        alert2 = 'Incorrect parameter for eps or min points.'
+                    else:
+                        n = len(sensorChecklist)
+                        temp = performDBSCAN(df, eps, minVal)
+                        if len(list(set(temp))) >= 10:
+                            alert2div['display'] = 'flex'
+                            alert2 = 'DBSCAN produced too many clusters. Try decreasing epsilon or increasing min points.'
+                        elif (len(list(set(temp))) == 1):
+                            alert2div['display'] = 'flex'
+                            alert2 = 'DBSCAN produced only outliers. Try increasing epsilon or decreasing min points.'
+                        else:
+                            data['labels'] = [0]*data.shape[0]
+                            data['clusterLabels'] = performDBSCAN(
+                                df, eps, minVal)
+                            ClusterColourContainer = {
+                                'display': 'block', 'width': 200, 'padding': 20}
+                elif (clusterMethod == 'Neural Network (Supervised)'):
+                    df = data.iloc[:, 1:-2]
+                    predictLabels = classifierNeuralNetwork.predict(df)
+                    # Round the highest value to 1 and all others to 0
+                    roundedLabels = np.zeros_like(predictLabels)
+                    roundedLabels[np.arange(len(predictLabels)),
+                                  predictLabels.argmax(axis=1)] = 1
+
+                    data['labels'] = np.argmax(roundedLabels, axis=1)
+
+                    for i in range(data.shape[0]):
+                        # data.loc['labels', i] += 1
+                        data.loc[i, 'labels'] += 1
+
+                    data['clusterLabels'] = [0]*data.shape[0]
+
+                x_0 = 0
+                x_1 = data.shape[0]
+
+                selectData = [go.Scatter3d(y=data.loc[:, yAxis_dropdown_3D], z=data.loc[:, zAxis_dropdown_3D], x=data.loc[:, xAxis_dropdown_3D], mode='markers', marker={
+                                           'size': 10, 'opacity': 1, 'color': [Styles.greyColours[val][0] for val in data['clusterLabels']], },)]
+
+                if (clusterMethod == 'Neural Network (Supervised)'):
+                    selectData = [go.Scatter3d(y=data.loc[:, yAxis_dropdown_3D], z=data.loc[:, zAxis_dropdown_3D], x=data.loc[:, xAxis_dropdown_3D], mode='markers', marker={
+                                               'size': 10, 'opacity': 1, 'color': [Styles.colours[val][0] for val in data['labels']], },)]
+
+        else:
+            if (removeLabelClick == 1):
+                data['labels'] = [0]*data.shape[0]
+                data['clusterLabels'] = [0]*data.shape[0]
+            selectData = [go.Scatter3d(y=data.loc[:, yAxis_dropdown_3D], z=data.loc[:,
+                                                                                    zAxis_dropdown_3D], x=data.loc[:, xAxis_dropdown_3D], mode='markers',
+                                       marker={
+                'size': 10,
+                'opacity': 1,
+                'color': [Styles.colours[int(val)][0] for val in data['labels']],
+            },)]
+        if clickedPoint is not None:
+            selectData.append(go.Scatter3d(x=[data[xAxis_dropdown_3D][clickedPoint]], y=[
+                data[yAxis_dropdown_3D][clickedPoint]], z=[data[zAxis_dropdown_3D][clickedPoint]], marker=dict(color='black', size=20)))
+
+        sensorDropdownStyle = {'display': 'none'}
+        layout = go.Layout(xaxis=dict(
+            title=xAxis_dropdown_3D), yaxis=dict(
+            title=yAxis_dropdown_3D), )
+
+        fig = {'data': selectData, 'layout': layout}
+
+        if (switchRepresentation % 2 == 1):
+            fig = px.scatter_3d(data, x=xAxis_dropdown_3D,
+                                y=yAxis_dropdown_3D, z=zAxis_dropdown_3D, color='Time',)
+
+    stat1 = 'Number of unlabelled data points: '
+    stat2 = 'Number of labelled data points: '
+    stat3 = 'Number of labels Placed: '
+
+    if 'labels' in data.columns:
+        labels = data['labels'].values.tolist()
+        n = labels.count(0)
+        stat1 += str(n)
+        stat2 += str(len(data['labels']) - n)
+        n = len(set(labels))
+        if 0 in set(labels):
+            stat3 += str(len(set(labels))-1)
+        else:
+            stat3 += str(len(set(labels)))
+
+    end_time = time.time()
+    elapsed_time = end_time - start_time
+    print("Elapsed time:", elapsed_time, "seconds")
+
+    return fig, labelButtonTitle, 0, 0, 0, stat1, stat2, stat3, alert2div,  alert2, sensorDropdownStyle, 0, ClusterColourContainer, xAxis_dropdown_3D_style, yAxis_dropdown_3D_style, zAxis_dropdown_3D_style
+
+
+# Run the app
+if __name__ == '__main__':
+    app.run_server(debug=True)
