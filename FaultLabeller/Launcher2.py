@@ -722,23 +722,28 @@ def toggle_modal(openModal, closeModal, addComments, commentInput, usernameInput
     modalChidren = [
         html.Div(style={'position': 'relative'}, children=[
             dcc.Markdown("Comments", style={
-                         'fontWeight': 'bold', 'fontSize': 20}),
+                         'fontWeight': 'bold', 'fontSize': 30}),
             html.Button("X", id='closeComments', style={'position': 'absolute', 'right': 10, 'top': 10})]
         )]
 
     for i in range(comments.shape[0]):
         modalChidren.append(
             html.Div(style={'flex-direction': 'row', 'display': 'flex', 'justify-content': 'space-evenly'},  children=[
-                dcc.Markdown(comments.iloc[i, 0], style={'width': '25%'}),
-                dcc.Markdown(comments.iloc[i, 1], style={'width': '25%'}),
-                dcc.Markdown(comments.iloc[i, 2], style={'width': '50%'}),
+                dcc.Markdown(comments.iloc[i, 0], style={
+                             'width': '15%', 'font-size': 20}),
+                dcc.Markdown(comments.iloc[i, 1], style={
+                             'width': '20%', 'font-size': 20}),
+                dcc.Markdown(comments.iloc[i, 2], style={
+                             'width': '65%', 'font-size': 20}),
             ]),)
 
     modalChidren.append(html.Div(
         html.Div(children=[
-            dcc.Input(id='commentInput', type='text', value='Comment'),
-            dcc.Input(id='usernameInput', type='text', value='Name'),
-            html.Button("Add Comment", id='addComment')]
+            dcc.Input(id='commentInput', type='text',
+                      value='Comment', style={'font-size': 20}),
+            dcc.Input(id='usernameInput', type='text',
+                      value='Name', style={'font-size': 20}),
+            html.Button("Add Comment", id='addComment', style={'font-size': 20, 'font-weight': 'bold'})]
         ),
     ),)
 
@@ -799,7 +804,7 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
     global colours
     global x_0
     global x_1
-    global currentPoint
+    global navigationPoint
     global clickedPoint
     global classifierNeuralNetwork
     global autoencoderNeuralNetwork
@@ -894,24 +899,24 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
             elif (faultFinder == 'Fault 3'):
                 target = 4
 
-            if (int(currentPoint) == len(data['labels'])):
+            if (int(navigationPoint) == len(data['labels'])):
                 # Create an alert to informt that there are no furher ponts
                 alert2div['display'] = 'flex'
                 alert2 = 'You have reached the end of the data.'
             else:
                 start = -1
                 end = -1
-                for i in range(int(currentPoint), len(data['labels'])):
+                for i in range(int(navigationPoint), len(data['labels'])):
                     if (data['labels'][i] == target):
                         start = i
                         for j in range(i, len(data['labels'])):
                             if (data['labels'][j] != target):
                                 end = j
-                                currentPoint = str(end)
+                                navigationPoint = str(end)
                                 break
                         if (end == -1):
                             end = len(data['labels'])
-                            currentPoint = str(end)
+                            navigationPoint = str(end)
                         break
                 if (start == -1):
                     # There is no exisiting label
@@ -937,7 +942,7 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
             elif (faultFinder == 'Fault 3'):
                 target = 4
 
-            if (int(currentPoint) == 0):
+            if (int(navigationPoint) == 0):
                 # Create an alert to informt that there are no furher ponts
                 alert2div['display'] = 'flex'
                 alert2 = 'You have reached the start of the data'
@@ -946,18 +951,18 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
                 start = -1
                 end = -1
 
-                for i in range(int(currentPoint)-1, 0, -1):
+                for i in range(int(navigationPoint)-1, 0, -1):
                     if (data['labels'][i] == target):
                         end = i
                         start = -1
                         for j in range(i, 0, -1):
                             if (data['labels'][j] != target):
                                 start = j
-                                currentPoint = str(start)
+                                navigationPoint = str(start)
                                 break
                         if (start == -1):
                             start = 0
-                            currentPoint = str(start)
+                            navigationPoint = str(start)
                         break
                 if (end == -1):
                     # There is no exisiting label

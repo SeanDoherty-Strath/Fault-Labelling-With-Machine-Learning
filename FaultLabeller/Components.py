@@ -275,7 +275,7 @@ uploadData = dcc.Upload(
         'borderRadius': '5px',
         'textAlign': 'center',
         'margin': '10px',
-        'display': 'none'
+        'display': 'block'
     },
     # Allow multiple files to be uploaded
     multiple=False
