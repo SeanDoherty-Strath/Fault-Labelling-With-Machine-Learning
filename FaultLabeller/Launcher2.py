@@ -51,8 +51,8 @@ app.layout = html.Div(style=Styles.window, children=[
 
     # MODALS
     Components.commentModal,
-    Components.alert1container,
-    Components.alert2container,
+    Components.alertOneContainer,
+    Components.alertTwoContainer,
 
     # CONTENTS
     Components.title,
@@ -210,8 +210,6 @@ def exportCSV(exportClicked, fileName):
     return dcc.send_file(fileName+'.csv')
 
 #  This function uploads data to the dashboard
-
-
 @app.callback(Output(Components.title, 'children'),
               Output(Components.sensorDropdown,
                      'options', allow_duplicate=True),
@@ -596,14 +594,15 @@ def selectDeselectAll(selectClicks, deselectClicks, graphSensors, sensorDropdown
 #  This function shows and hides clustering paratmeters
 @app.callback(
     Output(Components.K, 'style'),
-    Output('reducedSize', 'style'),
-    Output('reducedSizeMarkdown', 'style'),
-    Output('kMeansMarkdown', 'style'),
+    Output(Components.reducedSize, 'style'),
+    Output(Components.AI_text7, 'style'),
+    Output(Components.AI_text11, 'style'),
     Output('epsilon', 'style'),
     Output('minVal', 'style'),
     Output(Components.uploadTrainingData, 'style'),
     Output('sensor-checklist', 'value', allow_duplicate=True),
     Output(Components.uploadNewAutoencoder, 'style'),
+    Output('switchRepresentation', 'style'),
 
     Input(Components.clusterMethod, 'value'),
     Input(Components.reductionMethod, 'value'),
@@ -612,9 +611,10 @@ def selectDeselectAll(selectClicks, deselectClicks, graphSensors, sensorDropdown
     State('sensor-checklist', 'value'),
     State('sensor-checklist', 'options'),
     State(Components.uploadNewAutoencoder, 'style'),
+    State('switchRepresentation', 'style'),
     prevent_initial_call=True
 )
-def autoLabelStyles(clusterMethod, reductionMethod, switchView, uploadTrainingData, sensorChecklistValues, sensorChecklistOptions, uploadNewAutoencoder):
+def autoLabelStyles(clusterMethod, reductionMethod, switchView, uploadTrainingData, sensorChecklistValues, sensorChecklistOptions, uploadNewAutoencoder, switchRepresentation):
 
     print('got here 2')
     K_style = {'display': 'none'}
@@ -625,6 +625,10 @@ def autoLabelStyles(clusterMethod, reductionMethod, switchView, uploadTrainingDa
     minValStyle = {'display': 'none'}
     uploadTrainingData['display'] = 'none'
     uploadNewAutoencoder['display'] = 'none'
+    switchRepresentation['display'] = 'none'
+
+    if sensorChecklistValues == None:
+        sensorChecklistValues = []
 
     global data
     if data.empty:
@@ -657,7 +661,10 @@ def autoLabelStyles(clusterMethod, reductionMethod, switchView, uploadTrainingDa
         sensorChecklistValues = sensorChecklistOptions
         uploadNewAutoencoder['display'] = 'block'
 
-    return K_style, reducedStyle_style, reducedSizeMarkdown, kMeansMarkdown, epsStyle, minValStyle, uploadTrainingData, sensorChecklistValues, uploadNewAutoencoder
+    if switchView % 3 == 1 or switchView % 3 == 2:
+        switchRepresentation['display'] = 'block'
+
+    return K_style, reducedStyle_style, reducedSizeMarkdown, kMeansMarkdown, epsStyle, minValStyle, uploadTrainingData, sensorChecklistValues, uploadNewAutoencoder, switchRepresentation
 
 # This function finds the optimal value of minPts and epsilon, dependent on the user selected parameters
 

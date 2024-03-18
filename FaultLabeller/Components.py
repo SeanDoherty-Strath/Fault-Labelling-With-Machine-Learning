@@ -22,7 +22,7 @@ topBox = html.Div(style=Styles.topBox,
                       html.Button('Switch View', id='switchView',
                                   style={'fontSize': 20, 'margin': 20, 'position': 'absolute', 'left': 0, 'top': 0}),
                       html.Button('View Time Representation', id='switchRepresentation', style={
-                          'fontSize': 20, 'margin': 20, 'position': 'absolute', 'left': 130, 'top': 0}),
+                          'fontSize': 20, 'margin': 20, 'position': 'absolute', 'left': 130, 'top': 0, 'display':'none'}),
                       html.Button("Open Comments", id="open-modal",
                                   style={
                                       'fontSize': 20, 'margin': 20, 'position': 'absolute', 'right': 0, 'top': 0}),
@@ -86,7 +86,7 @@ commentModal = html.Div(
 
 )
 # Alerts
-alert2container = html.Div(children=[html.Div(id='alert2div',
+alertTwoContainer = html.Div(children=[html.Div(id='alert2div',
                                               style={
                                                   'display': 'none',
                                                   'position': 'absolute',
@@ -114,7 +114,7 @@ alert2container = html.Div(children=[html.Div(id='alert2div',
                                               ]
                                               )])
 # Alert 2
-alert1container = html.Div(children=[html.Div(id='alert1div', style={'display': 'none',  'backgroundColor': 'white', 'border': '5px solid black', 'margin': 10, 'align-items': 'center', 'width': 750, 'height': 50, 'flex-direction': 'row', },
+alertOneContainer = html.Div(children=[html.Div(id='alert1div', style={'display': 'none',  'backgroundColor': 'white', 'border': '5px solid black', 'margin': 10, 'align-items': 'center', 'width': 750, 'height': 50, 'flex-direction': 'row', },
                                               children=[
 
     dcc.Markdown('Click Data: ', style={
@@ -263,8 +263,8 @@ stat3 = dcc.Markdown('Data points unlabelled: ', style={
 uploadData = dcc.Upload(
 
     children=html.Div([
-        'Drag and Drop or ',
-        html.A('Select Files'),
+
+        html.A('Select Files to Upload'),
     ]),
     style={
         'width': '100%',
@@ -328,10 +328,10 @@ exportConfirm = html.Button(
 
 
 navigatorTitle = dcc.Markdown(
-    "Navigator", style={'margin': '20', 'fontSize': 24, 'fontWeight': 'bold'})
+    "Navigator", style={'margin': '20', 'fontSize': 24, 'fontWeight': 'bold', 'textAlign':'center'})
 navigationText = dcc.Markdown(
     'Search for:', style={'margin-left': 10, 'width': '25%'})
-navigationButtons = html.Div(style={'flex-direction': 'row'}, children=[
+navigationButtons = html.Div(style={'flex-direction': 'row', 'justify-content':'center', 'display':'flex', 'align-items':'center', 'width':'100%'}, children=[
     html.Button('Previous', id='findPrev', style={
                 'width': 80, 'height': 25, 'margin': 10, 'fontSize': 16}),
     html.Button('Next', id='findNext', style={
@@ -347,13 +347,13 @@ zAxis = html.Div(id='zAxisDropdownContainer', style=Styles.AxisDropdown, childre
                  zAxisText, zAxis_dropdown_3D])
 
 labelTitle = dcc.Markdown("Manually Label Faults", style={
-                          'height': '20%', 'fontSize': 24, 'fontWeight': 'bold'})
+                          'height': '20%', 'fontSize': 24, 'fontWeight': 'bold', 'textAlign':'center'})
 
 # Box 5
 Box5text = dcc.Markdown('Statistics', style={
     'fontSize': 26, 'fontWeight': 'bold', 'textAlign': 'center', })
 
-Box6text = dcc.Markdown('Export File to CSV', style={
+Box6text = dcc.Markdown('Import or Export Data', style={
                         'fontSize': 26, 'fontWeight': 'bold', 'textAlign': 'center', })
 
 downloadData = dcc.Download(id="downloadData")
