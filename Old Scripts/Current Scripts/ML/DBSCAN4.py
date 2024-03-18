@@ -31,8 +31,12 @@ def knee_point(X, k):
 # Example usage
 # X is your data
 # k is the number of nearest neighbors to consider
-data = pd.read_csv("Data/UpdatedDataFebruary24.csv")
-X = data.drop(data.columns[[0, 1, 2, 3]], axis=1)  # Remove extra columns
+data = pd.read_csv("FaultLabeller/Data/Scenario1.csv")
+X = data.drop(data.columns[[0]], axis=1)  # Remove extra columns
+scaler = StandardScaler()
+scaledData = scaler.fit_transform(data)
+X = pd.DataFrame(scaledData, columns=data.columns)
+
 # X = StandardScaler().fit_transform(data)
 
 # df = StandardScaler().fit_transform(data)
