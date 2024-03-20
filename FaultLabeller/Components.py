@@ -6,6 +6,7 @@ from dash import html
 import dash_bootstrap_components as dbc
 import Styles
 
+# Placeholder data 
 data = pd.DataFrame({
     'Sensor 1': [],
     'Sensor 2': [],
@@ -13,7 +14,7 @@ data = pd.DataFrame({
     'labels': []
 })
 
-# Top
+# Top box
 title = dcc.Markdown(children='Upload Data to Begin Fault Labelling', style={
                      'color': 'white', 'fontSize': 30,  'padding-bottom': 15, 'position': 'absolute', 'top': 0})
 
@@ -58,7 +59,6 @@ topBox = html.Div(style=Styles.topBox,
                   ])
 
 # Comments
-# Define the modal
 commentModal = html.Div(
     id="commentModal",
     style={
@@ -85,6 +85,7 @@ commentModal = html.Div(
     ]
 
 )
+
 # Alerts
 alertTwoContainer = html.Div(children=[html.Div(id='alert2div',
                                               style={
@@ -147,15 +148,6 @@ zAxisText = dcc.Markdown(
     'z axis: ', style={'margin-left': 50, 'fontSize': 20, 'width': '50%', 'display': 'block'})
 
 
-# Box 3
-
-faultFinderHeader = html.H3("Fault Finder", style={'margin': '0'})
-
-faultFinderText = dcc.Markdown(
-    'Search for:', style={'fontSize': 20, 'width': '25%'})
-faultFinder = dcc.Dropdown(value='Unlabelled Data Point', options=[
-                           'Unlabelled Data Points', 'No Fault', 'Fault 1', 'Fault 2', 'Fault 3'], style={'width': '90%'})
-
 
 # Box 2
 labelDropdown = dcc.Dropdown(value=1, options=[
@@ -171,6 +163,16 @@ labelDropdown = dcc.Dropdown(value=1, options=[
     {'label': 'Fault 8 (Brown)', 'value': 9},
     {'label': 'Fault 9 (Cyan)', 'value': 10}],
     style={'height': '20%'})
+
+# Box 3
+
+faultFinderHeader = html.H3("Fault Finder", style={'margin': '0'})
+
+faultFinderText = dcc.Markdown(
+    'Search for:', style={'fontSize': 20, 'width': '25%'})
+faultFinder = dcc.Dropdown(value='Unlabelled Data Point', options=[
+                           'Unlabelled Data Points', 'No Fault', 'Fault 1', 'Fault 2', 'Fault 3'], style={'width': '90%'})
+
 
 
 # Box 4
@@ -300,10 +302,9 @@ uploadTrainingData = dcc.Upload(
 )
 
 AI_text12 = dcc.Markdown('Epsilon:',  style={
-    'margin-left': 10, 'width': '50%', 'display': 'none'})
+    'margin-left': 10, 'width': '50%', 'display': 'block'})
 
-epsSlider = dcc.Slider(min=0, max=2,  marks={i: str(
-    i) for i in range(0, 2)}, step=0.1, value=0.1)
+epsSlider = dcc.Slider(min=0, max=2,  marks={i: str(i) for i in range(0, 2)}, step=0.1, value=0.1)
 
 AI_text13 = dcc.Markdown('Min Value:', style={
                          'margin-left': 10, 'width': '50%', 'display': 'none'})

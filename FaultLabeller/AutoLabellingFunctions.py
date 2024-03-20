@@ -1,4 +1,3 @@
-import plotly.express as px
 from sklearn.cluster import KMeans
 import pandas as pd
 from sklearn.preprocessing import StandardScaler
@@ -8,230 +7,140 @@ import numpy as np
 from sklearn.metrics import silhouette_score
 from sklearn.neighbors import NearestNeighbors
 from keras import layers
-import matplotlib.pyplot as plt
 import numpy as np
 import keras
 from keras import layers
 import pandas as pd
-import tensorflow as tf
 
 
-def performPCA(df, n):
-    print('Perform PCA')
-    scaler = StandardScaler()
-    scaled_data = scaler.fit_transform(df)
 
-    pca = PCA(n_components=n)
-    principal_components = pca.fit_transform(scaled_data)
-
-    columns = []
-    for i in range(n):
-
-        columns.append('PCA' + str(i))
-    principal_df = pd.DataFrame(
-        data=principal_components, columns=columns)
-    return principal_df
-
-
+# CLUSTERING FUNCTION
 def performKMeans(df, k):
+
+    # Normalize data
     scaler = StandardScaler()
     data = scaler.fit_transform(df)
 
+    # Peform K-Means
     kmeans = KMeans(n_clusters=k, n_init="auto")
-
-    # Fit the model to the data
     kmeans.fit(data)
 
-    # Get the cluster labels and centroids
+    # Get centoids and reutn labels
     labelArray = kmeans.labels_
     labels = labelArray.tolist()
 
     return labels
 
 
+# Tune DBSCAN Parameters
 def findKneePoint(df, k):
 
+    # Normalize data
     scaler = StandardScaler()
-    normalized_values = scaler.fit_transform(df)
+    normalizedValues = scaler.fit_transform(df)
 
-    nearest_neigbours = NearestNeighbors(n_neighbors=k)
-    nearest_neigbours.fit(normalized_values)
+    # Find k nearest neighborus
+    nearestNeighbours = NearestNeighbors(n_neighbors=k)
+    nearestNeighbours.fit(normalizedValues)
 
-    # Compute euclidian distance to k neighbors
-    distances, _ = nearest_neigbours.kneighbors(normalized_values)
-    avg_distances = np.mean(distances, axis=1)
+    # calculate euclidian distance to k neighbors
+    distances, _ = nearestNeighbours.kneighbors(normalizedValues)
+    averageDistances = np.mean(distances, axis=1)
 
-    # then sort into ascending order
-    sortDistances = np.sort(avg_distances)
+    #  sort into ascending order
+    sortDistances = np.sort(averageDistances)
 
     # Calculate cdf
     cdf = np.cumsum(sortDistances)
     cdf /= cdf[-1]
 
-    # finally, find knee point - which is the optimal value of EPS
-    knee_point_index = np.argmax(cdf >= 0.9)
-    eps = sortDistances[knee_point_index]
+    # find knee point - which corresponds to optimal value of EPS
+    kneePointsIndex = np.argmax(cdf >= 0.9)
+    eps = sortDistances[kneePointsIndex]
 
     return eps
 
 
-def performDBSCAN(data, eps, minVal):
-
+def performDBSCAN(df, eps, minVal):
+    # Normalize data
     scaler = StandardScaler()
-    normalized_values = scaler.fit_transform(data)
+    normalizedData = scaler.fit_transform(df)
 
+    # Perform DBSCAN
     dbscan = DBSCAN(eps=eps, min_samples=minVal)
-    dbscan.fit(normalized_values)
+    dbscan.fit(normalizedData)
     labels = dbscan.labels_.tolist()
-    print('Number of labels: ', len(set(labels)))
+
+    # print('Number of labels from DBSCAN ', len(set(labels)))
+
     return labels
 
 
-def createAutoencoder(trainingData):
+
+# FEATURE REDUCTION FUNCTIONS
+def performPCA(df, n):
+
+    # Normalize Data
+    scaler = StandardScaler()
+    scaledData = scaler.fit_transform(df)
+
+    # Peroform PCA
+    pca = PCA(n_components=n)
+
+    # Keep principal components
+    principalComponents = pca.fit_transform(scaledData)
+
+    # Create a new data frame
+    columns = []
+    for i in range(n):
+        columns.append('PCA' + str(i))
+
+    principalDF = pd.DataFrame(data=principalComponents, columns=columns)
+    return principalDF
+
+
+def createAutoencoder(df):
 
     # Standardize data
     scaler = StandardScaler()
-    normalized_values = scaler.fit_transform(trainingData)
+    normalizedData = scaler.fit_transform(df)
 
     # Create new df with the normalized values
     trainingData = pd.DataFrame(
-        normalized_values, columns=trainingData.columns)
+        normalizedData, columns=trainingData.columns)
 
     length = trainingData.shape[1]
 
     # Define the dimensions
-    input_output_dimension = length
-    hidden_layer_dimension = round(length/2)
-    encoding_dimension = 8
+    inputOutputDimensions = length
+    hiddenLayerDimensions = round(length/2)  # Hidden layer is approx. half the previous
+    encodingDimensions = 8
 
-    input_layer = keras.Input(shape=(input_output_dimension,))
-    encoder = layers.Dense(hidden_layer_dimension, activation='relu',
-                           activity_regularizer=tf.keras.regularizers.l1(0.05))(input_layer)
-    hidden_layer = layers.Dense(encoding_dimension, activation='relu',
-                                activity_regularizer=tf.keras.regularizers.l1(0.05))(encoder)
-    decoder = layers.Dense(hidden_layer_dimension,
-                           activation='relu')(hidden_layer)
-    output_layer = layers.Dense(
-        input_output_dimension, activation='linear')(decoder)
+
+    inputLayer = keras.Input(shape=(inputOutputDimensions,))
+    encoder = layers.Dense(hiddenLayerDimensions, activation='relu')(inputLayer)
+    bottleneck = layers.Dense(encodingDimensions, activation='relu')(encoder)
+    decoder = layers.Dense(hiddenLayerDimensions,activation='relu')(bottleneck)
+    outputLayer = layers.Dense(inputOutputDimensions, activation='linear')(decoder)
 
     # AUTOENCODER
-    autoencoder = keras.Model(inputs=input_layer, outputs=output_layer)
+    autoencoder = keras.Model(inputs=inputLayer, outputs=outputLayer)
 
     # COMPILE MODEL
     autoencoder.compile(optimizer='adam', loss='mse')
 
-#     # Record losses and epochs during training
-    num_epochs = 50
-#     epochs = []
-#     losses = []
-    #   class LossHistory(keras.callbacks.Callback):
-#         def on_epoch_end(self, epoch, logs=None):
-#             epochs.append(epoch)
-#             losses.append(logs['loss'])
 
+    # note: Don't do cross fold valdiation, for time efficiency
     xTrain = trainingData.sample(frac=0.8, random_state=42)
     xTest = trainingData.drop(xTrain.index)
 
-    autoencoder.fit(xTrain, xTrain, epochs=num_epochs, shuffle=True,
-                    validation_data=(xTest, xTest))
+    autoencoder.fit(xTrain, xTrain, epochs=100, shuffle=True,validation_data=(xTest, xTest))
 
-#     # plt.plot(epochs, losses, label='Training Loss')
-#     # plt.xlabel('Epochs')
-#     # plt.ylabel('Loss')
-#     # plt.title('Loss vs. Epochs')
-#     # plt.legend()
-#     # plt.show()
+    bottleneck = keras.Model(inputs=autoencoder.input,outputs=autoencoder.get_layer('dense_1').output)
 
-#     # create a model to convert to latent space
+    # latentSpace = bottleneck.predict(normalizedData)
+    # bottleneckDF = pd.DataFrame(data=latentSpace)
+    # return bottleneckDF
 
-    bottleneck = keras.Model(inputs=autoencoder.input,
-                             outputs=autoencoder.get_layer('dense_1').output)
     return bottleneck
 
-    # Transform data into the latent space
-    # latentSpace = bottleneck.predict(data)
-
-#     bottleneck_df = pd.DataFrame(
-#         data=latentSpace)
-#     return bottleneck_df
-
-
-# def performAutoEncoding(data):
-
-#     # Standardize data
-#     scaler = StandardScaler()
-#     normalized_values = scaler.fit_transform(data)
-
-#     # Create new df with the normalized values
-#     data = pd.DataFrame(normalized_values, columns=data.columns)
-
-#     # # return data
-#     length = data.shape[1]
-
-#     # Define the dimensions
-#     input_output_dimension = length
-#     hidden_layer_dimension = round(length/2)
-#     encoding_dimension = 8
-
-#     input_layer = keras.Input(shape=(input_output_dimension,))
-#     # input_layer = layers.Dropout(0.01)(input_layer)
-#     encoder = layers.Dense(
-#         hidden_layer_dimension, activation='relu', activity_regularizer=tf.keras.regularizers.l1(0.05))(input_layer)
-#     # encoder = layers.Dropout(0.01)(encoder)
-#     hidden_layer = layers.Dense(
-#         encoding_dimension, activation='relu', activity_regularizer=tf.keras.regularizers.l1(0.05))(encoder)
-#     decoder = layers.Dense(hidden_layer_dimension,
-#                            activation='relu')(hidden_layer)
-#     output_layer = layers.Dense(
-#         input_output_dimension, activation='linear')(decoder)
-
-#     # AUTOENCODER
-#     autoencoder = keras.Model(inputs=input_layer, outputs=output_layer)
-
-#     # COMPILE MODEL
-#     autoencoder.compile(optimizer='adam', loss='mse')
-
-#     # Record losses and epochs during training
-#     num_epochs = 50
-#     epochs = []
-#     losses = []
-
-#     #  prepare  input data.
-#     # xTrain = data.iloc[:16000, :]  # first 4/5 for training
-#     # xTest = data.iloc[16000:, :]  # final 1/5  for testing
-
-#     xTrain = data.sample(frac=0.8, random_state=42)
-#     xTest = data.drop(xTrain.index)
-
-#     losses = []
-#     epochs = []
-
-#     # Callback to record loss and epochs during training
-
-#     class LossHistory(keras.callbacks.Callback):
-#         def on_epoch_end(self, epoch, logs=None):
-#             epochs.append(epoch)
-#             losses.append(logs['loss'])
-
-#     autoencoder.fit(xTrain, xTrain, epochs=num_epochs, shuffle=True,
-#                     validation_data=(xTest, xTest), callbacks=[LossHistory()])
-
-#     # plt.plot(epochs, losses, label='Training Loss')
-#     # plt.xlabel('Epochs')
-#     # plt.ylabel('Loss')
-#     # plt.title('Loss vs. Epochs')
-#     # plt.legend()
-#     # plt.show()
-
-#     autoencoder.summary()
-#     # CONVERT TO LATENT SPACE
-
-#     bottleneck = keras.Model(inputs=autoencoder.input,
-#                              outputs=autoencoder.get_layer('dense_1').output)
-
-#     # Transform data into the latent space
-#     latentSpace = bottleneck.predict(data)
-
-#     bottleneck_df = pd.DataFrame(
-#         data=latentSpace)
-#     return bottleneck_df

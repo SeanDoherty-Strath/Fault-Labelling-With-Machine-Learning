@@ -132,13 +132,13 @@ app.layout = html.Div(style=Styles.window, children=[
             ]),
 
             Components.uploadTrainingData,
-            html.Div(id='epsilon', style=Styles.flex, children=[
+            html.Div(id='epsilon', style=Styles.sliderContainer, children=[
                 Components.AI_text12,
                 html.Div(style=Styles.slider, children=[
                     Components.epsSlider
                 ])
             ]),
-            html.Div(id='minVal', style=Styles.flex, children=[
+            html.Div(id='minVal', style=Styles.sliderContainer, children=[
                 Components.AI_text13,
                 html.Div(style=Styles.slider, children=[
                     Components.minPtsSlider
@@ -616,7 +616,6 @@ def selectDeselectAll(selectClicks, deselectClicks, graphSensors, sensorDropdown
 )
 def autoLabelStyles(clusterMethod, reductionMethod, switchView, uploadTrainingData, sensorChecklistValues, sensorChecklistOptions, uploadNewAutoencoder, switchRepresentation):
 
-    print('got here 2')
     K_style = {'display': 'none'}
     kMeansMarkdown = {'display': 'none'}
     reducedStyle_style = {'display': 'none'}
@@ -680,19 +679,12 @@ def autoLabelStyles(clusterMethod, reductionMethod, switchView, uploadTrainingDa
 )
 def DBSCAN_parameterSelection(clusterMethod, sensorChecklist, reducedSize, reductionMethod):
 
-    if clusterMethod == 'DBSCAN' and sensorChecklist != []:
+    if clusterMethod == 'DBSCAN' and sensorChecklist != [] and reductionMethod == 'PCA' and reducedSize != None:
         df = data.loc[:, sensorChecklist]
-        if reductionMethod == 'PCA':
-            if reducedSize != None:
-                df = performPCA(df, reducedSize)
-        elif reductionMethod == 'Auto-encoding':
-            # df = performAutoEncoding(df)
-            print('COME BACK')
+        df = performPCA(df, reducedSize)
+        eps = findKneePoint(df, reducedSize+ 1)
 
-        n = len(df.columns)
-        eps = findKneePoint(df, n + 1)
-
-        return n+1, eps
+        return reducedSize+1, eps
     else:
         raise PreventUpdate
 
