@@ -26,6 +26,8 @@ import datetime
 import io
 import base64
 
+errror
+
 # Internal Libraries
 from FaultLabeller.InternalLibraries.ML_Functions import performKMeans, performPCA, performDBSCAN, findKneePoint, createAutoencoder
 import FaultLabeller.InternalLibraries.Styles as Styles
