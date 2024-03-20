@@ -22,7 +22,7 @@ topBox = html.Div(style=Styles.topBox,
                       html.Button('Switch View', id='switchView',
                                   style={'fontSize': 20, 'margin': 20, 'position': 'absolute', 'left': 0, 'top': 0}),
                       html.Button('View Time Representation', id='switchRepresentation', style={
-                          'fontSize': 20, 'margin': 20, 'position': 'absolute', 'left': 130, 'top': 0, 'display':'none'}),
+                          'fontSize': 20, 'margin': 20, 'position': 'absolute', 'left': 130, 'top': 0, 'display': 'none'}),
                       html.Button("Open Comments", id="open-modal",
                                   style={
                                       'fontSize': 20, 'margin': 20, 'position': 'absolute', 'right': 0, 'top': 0}),
@@ -87,35 +87,35 @@ commentModal = html.Div(
 )
 # Alerts
 alertTwoContainer = html.Div(children=[html.Div(id='alert2div',
-                                              style={
-                                                  'display': 'none',
-                                                  'position': 'absolute',
-                                                  'top': '50%',
-                                                  'left': '50%',
-                                                  'width': 400,
-                                                  'height': 150,
-                                                  'transform': 'translate(-50%, -50%)',
-                                                  'background-color': 'white',
-                                                  'padding': '20px',
-                                                  'border-radius': '10px',
-                                                  'box-shadow': '0px 0px 10px 0px rgba(0,0,0,0.75)',
-                                                  'z-index': '9999',  # Ensures this div overlays other components
-                                                  'flex-direction': 'column',
-                                                  'align-items': 'center',
-                                                  'justify-content': 'center'
-                                              },
-                                              children=[
-                                                  dcc.Markdown('Warning: ', style={
-                                                      'fontSize': 24, 'fontWeight': 'bold'}),
-                                                  dcc.Markdown('Message', id='alert2', style={
-                                                               'fontSize': 24}),
-                                                  html.Button(
-                                                      'Close', id='closeAlert2', style={})
-                                              ]
-                                              )])
+                                                style={
+                                                    'display': 'none',
+                                                    'position': 'absolute',
+                                                    'top': '50%',
+                                                    'left': '50%',
+                                                    'width': 400,
+                                                    'height': 150,
+                                                    'transform': 'translate(-50%, -50%)',
+                                                    'background-color': 'white',
+                                                    'padding': '20px',
+                                                    'border-radius': '10px',
+                                                    'box-shadow': '0px 0px 10px 0px rgba(0,0,0,0.75)',
+                                                    'z-index': '9999',  # Ensures this div overlays other components
+                                                    'flex-direction': 'column',
+                                                    'align-items': 'center',
+                                                    'justify-content': 'center'
+                                                },
+                                                children=[
+                                                    dcc.Markdown('Warning: ', style={
+                                                        'fontSize': 24, 'fontWeight': 'bold'}),
+                                                    dcc.Markdown('Message', id='alert2', style={
+                                                        'fontSize': 24}),
+                                                    html.Button(
+                                                        'Close', id='closeAlert2', style={})
+                                                ]
+                                                )])
 # Alert 2
 alertOneContainer = html.Div(children=[html.Div(id='alert1div', style={'display': 'none',  'backgroundColor': 'white', 'border': '5px solid black', 'margin': 10, 'align-items': 'center', 'width': 750, 'height': 50, 'flex-direction': 'row', },
-                                              children=[
+                                                children=[
 
     dcc.Markdown('Click Data: ', style={
         'fontSize': 24, 'fontWeight': 'bold', 'padding': 10}),
@@ -202,8 +202,8 @@ AI_text8 = dcc.Markdown('Clustering: ', style={
 reducedSize = dcc.Input(type='number', id='reducedSize', style={
     'align-self': 'center', 'width': '100%', 'height': '90%', 'fontSize': 20, 'display': 'none'})
 
-uploadNewAutoencoder = dcc.Upload(
-    children='Select data to train a new autoencoder',
+uploadNewAutoencoder = html.Button(
+    children='Train autoencoder',
     style={
         'height': '60px',
         'lineHeight': '60px',
@@ -214,7 +214,6 @@ uploadNewAutoencoder = dcc.Upload(
         'margin': '10px',
         'display': 'none'
     },
-    multiple=False
 )
 
 AI_text9 = dcc.Markdown(
@@ -328,10 +327,10 @@ exportConfirm = html.Button(
 
 
 navigatorTitle = dcc.Markdown(
-    "Navigator", style={'margin': '20', 'fontSize': 24, 'fontWeight': 'bold', 'textAlign':'center'})
+    "Navigator", style={'margin': '20', 'fontSize': 24, 'fontWeight': 'bold', 'textAlign': 'center'})
 navigationText = dcc.Markdown(
     'Search for:', style={'margin-left': 10, 'width': '25%'})
-navigationButtons = html.Div(style={'flex-direction': 'row', 'justify-content':'center', 'display':'flex', 'align-items':'center', 'width':'100%'}, children=[
+navigationButtons = html.Div(style={'flex-direction': 'row', 'justify-content': 'center', 'display': 'flex', 'align-items': 'center', 'width': '100%'}, children=[
     html.Button('Previous', id='findPrev', style={
                 'width': 80, 'height': 25, 'margin': 10, 'fontSize': 16}),
     html.Button('Next', id='findNext', style={
@@ -347,7 +346,7 @@ zAxis = html.Div(id='zAxisDropdownContainer', style=Styles.AxisDropdown, childre
                  zAxisText, zAxis_dropdown_3D])
 
 labelTitle = dcc.Markdown("Manually Label Faults", style={
-                          'height': '20%', 'fontSize': 24, 'fontWeight': 'bold', 'textAlign':'center'})
+                          'height': '20%', 'fontSize': 24, 'fontWeight': 'bold', 'textAlign': 'center'})
 
 # Box 5
 Box5text = dcc.Markdown('Statistics', style={

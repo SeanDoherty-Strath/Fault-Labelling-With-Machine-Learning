@@ -210,6 +210,8 @@ def exportCSV(exportClicked, fileName):
     return dcc.send_file(fileName+'.csv')
 
 #  This function uploads data to the dashboard
+
+
 @app.callback(Output(Components.title, 'children'),
               Output(Components.sensorDropdown,
                      'options', allow_duplicate=True),
@@ -339,33 +341,16 @@ def updateNeuralNetwork(contents):
 
 
 @app.callback(Output('mainGraph', 'figure'),
-              Input(Components.uploadNewAutoencoder, 'contents'),
+              Input(Components.uploadNewAutoencoder, 'n_clicks'),
               prevent_initial_call=True
               )
-def updateAutoencoder(contents):
+def updateAutoencoder(n_clicks):
     global autoencoderNeuralNetwork
 
-    if contents is not None:
-        content_type, content_string = contents.split(',')
-        decoded = io.StringIO(base64.b64decode(content_string).decode('utf-8'))
-
-        trainingData = pd.read_csv(decoded)
-
-        if 'commentMessage' in trainingData.columns and 'commentTime' in trainingData.columns and 'commentUser' in trainingData.columns:
-            trainingData.drop(
-                columns=['commentMessage', 'commentTime', 'commentUser'], inplace=True)
-
-        if 'Unnamed: 0' in trainingData.columns:
-            trainingData.drop(columns=['Unnamed: 0'], inplace=True)
-
-        if 'Time' in trainingData.columns:
-            trainingData.drop(columns=['Time'], inplace=True)
-
-        if 'labels' in trainingData.columns:
-            trainingData.drop(columns=['labels'], inplace=True)
-
-        if 'correctLabels' in trainingData.columns:
-            trainingData.drop(columns=['correctLabels'], inplace=True)
+    if n_clicks is not None:
+        trainingData = data
+        trainingData.drop(
+            columns=['labels', 'Time', 'clusterLabels'], inplace=True)
 
         autoencoder = createAutoencoder(trainingData)
 
@@ -1283,7 +1268,7 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
 
         if clickedPoint is not None:
             selectData.append(go.Scatter(x=[data[xAxis_dropdown_3D][clickedPoint]], y=[
-                data[yAxis_dropdown_3D][clickedPoint]],  marker=dict(color='black')))
+                data[yAxis_dropdown_3D][clickedPoint]],  marker=dict(color='black', size=40)))
 
     if (switchViewButtonClicks % 3 == 2):
         #  3D SCATTER PLOT
@@ -1391,7 +1376,7 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
             },)]
         if clickedPoint is not None:
             selectData.append(go.Scatter3d(x=[data[xAxis_dropdown_3D][clickedPoint]], y=[
-                data[yAxis_dropdown_3D][clickedPoint]], z=[data[zAxis_dropdown_3D][clickedPoint]], marker=dict(color='black', size=20)))
+                data[yAxis_dropdown_3D][clickedPoint]], z=[data[zAxis_dropdown_3D][clickedPoint]], marker=dict(color='black', size=40)))
 
         sensorDropdownStyle = {'display': 'none'}
         layout = go.Layout(xaxis=dict(
