@@ -4,7 +4,7 @@ import plotly.express as px
 import plotly.graph_objs as go
 from dash import html
 import dash_bootstrap_components as dbc
-import Styles
+import FaultLabeller.InternalLibraries.Styles as Styles
 
 # Placeholder data 
 data = pd.DataFrame({
