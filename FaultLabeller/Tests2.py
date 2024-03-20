@@ -1,4 +1,4 @@
-from AutoLabellingFunctions import performKMeans, performPCA, performDBSCAN, findKneePoint, performAutoEncoding
+from FaultLabeller.InternalLibraries.ML_Functions import performKMeans, performPCA, performDBSCAN, findKneePoint, performAutoEncoding
 import dash
 from dash import html
 from dash import dcc

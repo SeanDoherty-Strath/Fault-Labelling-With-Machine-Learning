@@ -32,9 +32,11 @@ Box3Container2 = {'display': 'flex', 'width': '100%'}
 
 AI_button1 = {'width': 100, 'margin': 5, }
 
-flex = {'display': 'flex', }
+flex = {'display': 'flex' }
 
-slider = {'width': '100%', 'display': 'none'}
+sliderContainer = {'display': 'none' }
+
+slider = {'width': '100%', 'display': 'block'}
 
 startButton = {'width': '100%', 'fontSize': 20}
 
