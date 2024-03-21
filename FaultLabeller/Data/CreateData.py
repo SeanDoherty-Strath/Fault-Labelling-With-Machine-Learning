@@ -154,3 +154,39 @@ newDF.to_csv(filepath)
 newDF['correctLabels'] = [1]*1440 + [3]*256 + [1]*2160 + [2]*256 + [3]*256
 filepath = Path('FaultLabeller/Data/Scenario4withLabels.csv')
 newDF.to_csv(filepath)
+
+
+# Scenario 5
+#   - Normal operation for 480 samples
+#   - Fault 1 for 480 samples
+#   - Fault 2  for 480 samples
+#   - Fault 3 for 480 samples
+#  Repeated 3 steps
+
+newDF = pd.DataFrame()
+
+for i in range(0, 3):
+    print(i)
+    faultFreeOffset = i*500
+    faultyOffset = i*10000
+
+    newDF = newDF._append(
+        FaultFreeData.iloc[faultFreeOffset:faultFreeOffset+480], ignore_index=True)
+    newDF = newDF._append(
+        FaultyData.iloc[faultyOffset+20:faultyOffset+500], ignore_index=True)
+    newDF = newDF._append(
+        FaultyData.iloc[faultyOffset+20+500:faultyOffset+1000], ignore_index=True)
+    newDF = newDF._append(
+        FaultyData.iloc[faultyOffset+20+500*5:faultyOffset+500*6], ignore_index=True)
+
+
+newDF = newDF.drop(data.columns[[0, 1, 2]], axis=1)  # Remove extra columns
+print(newDF.shape)
+# expected 25760
+filepath = Path('FaultLabeller/Data/Scenario5.csv')
+newDF.to_csv(filepath)
+
+labels = [1]*480 + [2]*480 + [3]*480 + [4]*480
+newDF['correctLabels'] = labels*3
+filepath = Path('FaultLabeller/Data/Scenario5withLabels.csv')
+newDF.to_csv(filepath)
