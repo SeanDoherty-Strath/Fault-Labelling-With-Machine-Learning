@@ -4,9 +4,9 @@ import plotly.express as px
 import plotly.graph_objs as go
 from dash import html
 import dash_bootstrap_components as dbc
-import FaultLabeller.InternalLibraries.Styles as Styles
+import InternalLibraries.Styles as Styles
 
-# Placeholder data 
+# Placeholder data
 data = pd.DataFrame({
     'Sensor 1': [],
     'Sensor 2': [],
@@ -148,7 +148,6 @@ zAxisText = dcc.Markdown(
     'z axis: ', style={'margin-left': 50, 'fontSize': 20, 'width': '50%', 'display': 'block'})
 
 
-
 # Box 2
 labelDropdown = dcc.Dropdown(value=1, options=[
     {'label': 'Unlabelled', 'value': 0},
@@ -172,7 +171,6 @@ faultFinderText = dcc.Markdown(
     'Search for:', style={'fontSize': 20, 'width': '25%'})
 faultFinder = dcc.Dropdown(value='Unlabelled Data Point', options=[
                            'Unlabelled Data Points', 'No Fault', 'Fault 1', 'Fault 2', 'Fault 3'], style={'width': '90%'})
-
 
 
 # Box 4
@@ -236,7 +234,7 @@ AI_sensorChecklist = html.Div(style={'width': '100%', 'overflow': 'scroll'}, chi
         id='sensor-checklist', options=[], inline=True, labelStyle={'width': '25%', 'fontSize': 14})
 ])
 
-AI_selectButtons = html.Div(style={'display': 'flex'}, children=[
+AI_selectButtons = html.Div(style={'display': 'flex', 'width': '100%'}, children=[
     html.Button(
         "Select all", id='select-all', style=Styles.AI_button1),
     html.Button(
@@ -303,7 +301,8 @@ uploadTrainingData = dcc.Upload(
 AI_text12 = dcc.Markdown('Epsilon:',  style={
     'margin-left': 10, 'width': '50%', 'display': 'block'})
 
-epsSlider = dcc.Slider(min=0, max=2,  marks={i: str(i) for i in range(0, 2)}, step=0.1, value=0.1)
+epsSlider = dcc.Slider(min=0, max=2,  marks={i: str(
+    i) for i in range(0, 2)}, step=0.1, value=0.1)
 
 AI_text13 = dcc.Markdown('Min Value:', style={
                          'margin-left': 10, 'width': '50%', 'display': 'none'})
@@ -316,14 +315,16 @@ exportName = dcc.Input(
     id='LabelledData',
     type='text',
     value='Filename',
-    style={'width': '70%', 'height': 30, 'fontSize': 20
+    style={'width': '70%', 'fontSize': 20,
            }
 )
+
+includeCommentsButton = html.Button("Include Comments: ")
 
 
 exportConfirm = html.Button(
     'Export',
-    style={'width': '20%', 'height': 30}
+    style={'width': '20%', 'fontWeight': 'bold'}
 )
 
 

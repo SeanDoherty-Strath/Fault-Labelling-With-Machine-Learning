@@ -1,6 +1,6 @@
-import FaultLabeller.InternalLibraries.Components as Components
+import InternalLibraries.Components as Components
 from dash import html
-import FaultLabeller.InternalLibraries.Styles as Styles
+import InternalLibraries.Styles as Styles
 
 mainLayout = html.Div(style=Styles.window, children=[
 
@@ -118,6 +118,7 @@ mainLayout = html.Div(style=Styles.window, children=[
                     Components.Box6text,
                     html.Div(style=Styles.Box6Container2, children=[
                         Components.exportName,
+                        Components.includeCommentsButton,
                         Components.exportConfirm]),
                     Components.downloadData,
                     Components.uploadData,
