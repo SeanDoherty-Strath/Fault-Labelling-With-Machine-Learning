@@ -301,8 +301,8 @@ uploadTrainingData = dcc.Upload(
 AI_text12 = dcc.Markdown('Epsilon:',  style={
     'margin-left': 10, 'width': '50%', 'display': 'block'})
 
-epsSlider = dcc.Slider(min=0, max=2,  marks={i: str(
-    i) for i in range(0, 2)}, step=0.1, value=0.1)
+epsSlider = dcc.Slider(min=0, max=5,  marks={i: str(
+    i) for i in range(0, 5)}, step=0.1, value=0.1)
 
 AI_text13 = dcc.Markdown('Min Value:', style={
                          'margin-left': 10, 'width': '50%', 'display': 'none'})

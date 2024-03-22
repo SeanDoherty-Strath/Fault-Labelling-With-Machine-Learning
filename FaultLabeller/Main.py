@@ -27,7 +27,7 @@ import io
 import base64
 
 # Internal Libraries
-from InternalLibraries.ML_Functions import performKMeans, performPCA, performDBSCAN, findKneePoint, createAutoencoder
+from InternalLibraries.ML_Functions import performKMeans, performPCA, performDBSCAN, findKneePoint, createAutoencoder, trainNeuralNetwork, useNeuralNetwork, testDBSCAN
 import InternalLibraries.Styles as Styles
 import InternalLibraries.Components as Components
 from InternalLibraries.Layout import mainLayout
@@ -186,11 +186,11 @@ def uploadData(contents, filename):
               prevent_initial_call=True
               )
 def updateNeuralNetwork(contents):
-    try:
-        global classifierNeuralNetwork
-        trainingData = pd.DataFrame()
 
+    try:
         if contents is not None:
+
+            trainingData = pd.DataFrame()
             for i in range(0, len(contents)):
                 content_type, content_string = contents[i].split(',')
                 decoded = io.StringIO(base64.b64decode(
@@ -208,53 +208,16 @@ def updateNeuralNetwork(contents):
             if 'Time' in trainingData.columns:
                 trainingData.drop(columns=['Time'], inplace=True)
 
-            if 'labels' not in trainingData.columns or 'correctLabels' not in trainingData.columns:
+            if 'labels' not in trainingData.columns and 'correctLabels' not in trainingData.columns:
                 raise PreventUpdate
 
-            X = trainingData.iloc[:, :-1]
-            y = trainingData.iloc[:, -1]
-            y = np.array(y)
+            classifierNeuralNetwork = trainNeuralNetwork(trainingData)
 
-            inputSize = X.shape[1]
-            outputSize = len(set(y))
-
-            print(X)
-            print(y)
-
-            print('INPUT / OUTPUT', inputSize, ' ', outputSize)
-
-            # One-hot encode the target labels
-            encoder = OneHotEncoder(sparse=False)
-            y = encoder.fit_transform(y.reshape(-1, 1))
-
-            # Split the dataset into training and testing sets
-            X_train, X_test, y_train, y_test = train_test_split(
-                X, y, test_size=0.2, random_state=42)
-
-            # Define the model
-            model = Sequential([
-                Dense(64, activation='relu', input_shape=(
-                    inputSize,)),  # 4 input features
-                Dense(32, activation='relu'),
-                Dense(16, activation='relu'),  # Input layer with 52 neurons
-                # Output layer with 3 units for 3 classes
-                Dense(outputSize, activation='softmax')
-            ])
-
-            # Compile the model
-            model.compile(optimizer='adam',  # Use categorical crossentropy for one-hot encoded labels
-                          loss='categorical_crossentropy',
-                          metrics=['accuracy'])
-            # Train the model
-            model.fit(X_train, y_train, epochs=50, batch_size=32,
-                      validation_data=(X_test, y_test))
-
-            model.save("FaultLabeller/NeuralNetworks/multiclassNeuralNetwork")
-            classifierNeuralNetwork = model
+            classifierNeuralNetwork.save(
+                "FaultLabeller/NeuralNetworks/multiclassNeuralNetwork")
 
         raise PreventUpdate
     except Exception as e:
-        print(f"An error occurred: {e}")
         raise PreventUpdate
 
 
@@ -366,43 +329,43 @@ def autoLabelOptions(startAutoLabelClicks):
     prevent_initial_call=True,
 )
 def colorLabels(colorNow, area0, area1, area2, area3, area4, area5, area6, area7, area8, area9, figure, relayoutData, switchView, alert2div):
-    try:
-        if colorNow == None or colorNow == 0:
-            raise PreventUpdate
-        else:
-
-            global x_0
-            global x_1
-            alert2div['display'] = 'none'
-            alertMessage = ''
-            if (switchView is None):
-                switchView = 0
-            areas = [area0, area1, area2, area3, area4,
-                     area5, area6, area7, area8, area9]
-
-            ClusterColourContainer = {'display': 'none'}
-
-            for i in range(len(set(data['clusterLabels']))):
-                if areas[i] == None:
-
-                    alert2div['display'] = 'flex'
-                    alertMessage = 'Not all dropdowns were full. Labelling may be wrong.'
-
-            for i in range(len(data['labels'])):
-                for j in range(len(areas)):
-                    if j == data['clusterLabels'][i]:
-                        if areas[j] == None:
-                            data.loc[i, 'labels'] = 0
-                        else:
-                            data.loc[i, 'labels'] = areas[j]
-
-            data['clusterLabels'] = [0]*data.shape[0]
-            ClusterColourContainer = {'display': 'none'}
-
-            return 0, ClusterColourContainer, alert2div, alertMessage
-    except Exception as e:
-        print(f"An error occurred: {e}")
+    # try:
+    if colorNow == None or colorNow == 0:
         raise PreventUpdate
+    else:
+
+        global x_0
+        global x_1
+        alert2div['display'] = 'none'
+        alertMessage = ''
+        if (switchView is None):
+            switchView = 0
+        areas = [area0, area1, area2, area3, area4,
+                 area5, area6, area7, area8, area9]
+
+        ClusterColourContainer = {'display': 'none'}
+
+        for i in range(len(set(data['clusterLabels']))):
+            if areas[i] == None:
+
+                alert2div['display'] = 'flex'
+                alertMessage = 'Not all dropdowns were full. Labelling may be wrong.'
+
+        for i in range(len(data['labels'])):
+            for j in range(len(areas)):
+                if j == data['clusterLabels'][i]:
+                    if areas[j] == None:
+                        data.loc[i, 'labels'] = 0
+                    else:
+                        data.loc[i, 'labels'] = areas[j]
+
+        data['clusterLabels'] = [0]*data.shape[0]
+        ClusterColourContainer = {'display': 'none'}
+
+        return 0, ClusterColourContainer, alert2div, alertMessage
+    # except Exception as e:
+    #     print(f"An error occurred: {e}")
+    #     raise PreventUpdate
 
 # This function closes the alerts
 
@@ -606,10 +569,19 @@ def DBSCAN_parameterSelection(clusterMethod, sensorChecklist, reducedSize, reduc
     try:
         if clusterMethod == 'DBSCAN' and sensorChecklist != [] and reductionMethod == 'PCA' and reducedSize != None:
             df = data.loc[:, sensorChecklist]
-            df = performPCA(df, reducedSize)
-            eps = findKneePoint(df, reducedSize + 1)
+            df = performPCA(df, 10)
+            eps = findKneePoint(df, 10)
+            print('got here')
+            return 10, eps
+        elif clusterMethod == 'DBSCAN' and sensorChecklist != [] and reductionMethod == 'None':
+            df = data.loc[:, sensorChecklist]
+            eps = findKneePoint(df, 10)
+        elif clusterMethod == 'DBSCAN' and sensorChecklist != [] and reductionMethod == 'Auto-encoding':
+            df = data
+            df = autoencoderNeuralNetwork.predict(df)
+            eps = findKneePoint(df, 10)
 
-            return reducedSize+1, eps
+            return 10, eps
         else:
             raise PreventUpdate
     except Exception as e:
@@ -954,29 +926,16 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
                                 alert2 = 'DBSCAN produced only outliers. Try increasing epsilon or decreasing min points.'
                             else:
                                 data['labels'] = [0]*data.shape[0]
-                                data['clusterLabels'] = performDBSCAN(
-                                    df, eps, minVal)
+                                data['clusterLabels'] = temp
+                                testDBSCAN(data['clusterLabels'])
                                 ClusterColourContainer = {
                                     'display': 'block', 'width': 200, 'padding': 20}
                     elif (clusterMethod == 'Neural Network (Supervised)'):
                         df = data.iloc[:, 1:-2]
 
-                        print(df)
-                        print('DATA SHAPE:', df.shape)
-                        predictLabels = classifierNeuralNetwork.predict(df)
-
-                        # Round the highest value to 1 and all others to 0
-                        roundedLabels = np.zeros_like(predictLabels)
-                        roundedLabels[np.arange(len(predictLabels)),
-                                      predictLabels.argmax(axis=1)] = 1
-
-                        data['labels'] = np.argmax(roundedLabels, axis=1)
-
-                        for i in range(data.shape[0]):
-                            data.loc[i, 'labels'] += 1
-
+                        data['labels'] = useNeuralNetwork(
+                            df, classifierNeuralNetwork)
                         data['clusterLabels'] = [0]*data.shape[0]
-
                     x_0 = 0
                     x_1 = data.shape[0]
 
@@ -1164,18 +1123,9 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
                                     'display': 'block', 'width': 200, 'padding': 20}
                     elif (clusterMethod == 'Neural Network (Supervised)'):
                         df = data.iloc[:, 1:-2]
-                        predictLabels = classifierNeuralNetwork.predict(df)
-                        # Round the highest value to 1 and all others to 0
-                        roundedLabels = np.zeros_like(predictLabels)
-                        roundedLabels[np.arange(len(predictLabels)),
-                                      predictLabels.argmax(axis=1)] = 1
 
-                        data['labels'] = np.argmax(roundedLabels, axis=1)
-
-                        for i in range(data.shape[0]):
-                            # data.loc['labels', i] += 1
-                            data.loc[i, 'labels'] += 1
-
+                        data['labels'] = useNeuralNetwork(
+                            df, classifierNeuralNetwork)
                         data['clusterLabels'] = [0]*data.shape[0]
 
                     x_0 = 0
@@ -1279,18 +1229,9 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
                                     'display': 'block', 'width': 200, 'padding': 20}
                     elif (clusterMethod == 'Neural Network (Supervised)'):
                         df = data.iloc[:, 1:-2]
-                        predictLabels = classifierNeuralNetwork.predict(df)
-                        # Round the highest value to 1 and all others to 0
-                        roundedLabels = np.zeros_like(predictLabels)
-                        roundedLabels[np.arange(len(predictLabels)),
-                                      predictLabels.argmax(axis=1)] = 1
 
-                        data['labels'] = np.argmax(roundedLabels, axis=1)
-
-                        for i in range(data.shape[0]):
-                            # data.loc['labels', i] += 1
-                            data.loc[i, 'labels'] += 1
-
+                        data['labels'] = useNeuralNetwork(
+                            df, classifierNeuralNetwork)
                         data['clusterLabels'] = [0]*data.shape[0]
 
                     x_0 = 0

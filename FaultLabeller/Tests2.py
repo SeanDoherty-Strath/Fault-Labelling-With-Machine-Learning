@@ -1,4 +1,4 @@
-from FaultLabeller.InternalLibraries.ML_Functions import performKMeans, performPCA, performDBSCAN, findKneePoint, performAutoEncoding
+from InternalLibraries.ML_Functions import performKMeans, performPCA, performDBSCAN, findKneePoint, createAutoencoder, trainNeuralNetwork, useNeuralNetwork
 import dash
 from dash import html
 from dash import dcc
@@ -14,11 +14,9 @@ from sklearn.neighbors import NearestNeighbors
 import matplotlib.pyplot as plt
 import numpy as np
 from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import accuracy_score
 
 # DATA
-data = pd.read_csv("FaultLabeller/Data/Scenario1.csv")
-data = data.drop(data.columns[[0]], axis=1)  # Remove extra columns
-print(data)
 
 zeros = [0] * 480
 ones = [1] * 480
@@ -55,28 +53,197 @@ combinations.append(threes + twos + threes + zeros + threes + ones)
 combinations.append(threes + twos + threes + ones + threes + zeros)
 
 
-bestAccuracy = 0
-k = 8
+# # Scenario 2
+# #   - Normal operation 100 samples
+# #   - Fault 1 for 20 samples
+# #   - Normal operation 100 samples
+# #   - Fault 2 for 20 samples
+# # - Normal operation 100 samples
+# #   - Fault 3 for 20 samples
+# #   - Repeated three times
+# combinations = []
 
-data = performAutoEncoding(data)
+# zeros = [0] * 100
+# ones = [1] * 20
+# twos = [2] * 20
+# threes = [3] * 20
+
+
+# combinations.append(zeros + ones + zeros + twos + zeros + threes + zeros + ones +
+#                     zeros + twos + zeros + threes + zeros + ones + zeros + twos + zeros + threes)
+# combinations.append(zeros + ones + zeros + threes + zeros + twos + zeros + ones +
+#                     zeros + threes + zeros + twos + zeros + ones + zeros + threes + zeros + twos)
+# combinations.append(zeros + twos + zeros + ones + zeros + threes + zeros + twos +
+#                     zeros + ones + zeros + threes + zeros + twos + zeros + ones + zeros + threes)
+# combinations.append(zeros + twos + zeros + threes + zeros + ones + zeros + twos +
+#                     zeros + threes + zeros + ones + zeros + twos + zeros + threes + zeros + ones)
+# combinations.append(zeros + threes + zeros + ones + zeros + twos + zeros + threes +
+#                     zeros + ones + zeros + twos + zeros + threes + zeros + ones + zeros + twos)
+# combinations.append(zeros + threes + zeros + twos + zeros + ones + zeros + threes +
+#                     zeros + twos + zeros + ones + zeros + threes + zeros + twos + zeros + ones)
+
+# zeros = [1] * 100
+# ones = [0] * 20
+# twos = [2] * 20
+# threes = [3] * 20
+
+
+# combinations.append(zeros + ones + zeros + twos + zeros + threes + zeros + ones +
+#                     zeros + twos + zeros + threes + zeros + ones + zeros + twos + zeros + threes)
+# combinations.append(zeros + ones + zeros + threes + zeros + twos + zeros + ones +
+#                     zeros + threes + zeros + twos + zeros + ones + zeros + threes + zeros + twos)
+# combinations.append(zeros + twos + zeros + ones + zeros + threes + zeros + twos +
+#                     zeros + ones + zeros + threes + zeros + twos + zeros + ones + zeros + threes)
+# combinations.append(zeros + twos + zeros + threes + zeros + ones + zeros + twos +
+#                     zeros + threes + zeros + ones + zeros + twos + zeros + threes + zeros + ones)
+# combinations.append(zeros + threes + zeros + ones + zeros + twos + zeros + threes +
+#                     zeros + ones + zeros + twos + zeros + threes + zeros + ones + zeros + twos)
+# combinations.append(zeros + threes + zeros + twos + zeros + ones + zeros + threes +
+#                     zeros + twos + zeros + ones + zeros + threes + zeros + twos + zeros + ones)
+
+# zeros = [2] * 100
+# ones = [1] * 20
+# twos = [0] * 20
+# threes = [3] * 20
+
+
+# combinations.append(zeros + ones + zeros + twos + zeros + threes + zeros + ones +
+#                     zeros + twos + zeros + threes + zeros + ones + zeros + twos + zeros + threes)
+# combinations.append(zeros + ones + zeros + threes + zeros + twos + zeros + ones +
+#                     zeros + threes + zeros + twos + zeros + ones + zeros + threes + zeros + twos)
+# combinations.append(zeros + twos + zeros + ones + zeros + threes + zeros + twos +
+#                     zeros + ones + zeros + threes + zeros + twos + zeros + ones + zeros + threes)
+# combinations.append(zeros + twos + zeros + threes + zeros + ones + zeros + twos +
+#                     zeros + threes + zeros + ones + zeros + twos + zeros + threes + zeros + ones)
+# combinations.append(zeros + threes + zeros + ones + zeros + twos + zeros + threes +
+#                     zeros + ones + zeros + twos + zeros + threes + zeros + ones + zeros + twos)
+# combinations.append(zeros + threes + zeros + twos + zeros + ones + zeros + threes +
+#                     zeros + twos + zeros + ones + zeros + threes + zeros + twos + zeros + ones)
+
+# zeros = [3] * 100
+# ones = [1] * 20
+# twos = [2] * 20
+# threes = [0] * 20
+
+
+# combinations.append(zeros + ones + zeros + twos + zeros + threes + zeros + ones +
+#                     zeros + twos + zeros + threes + zeros + ones + zeros + twos + zeros + threes)
+# combinations.append(zeros + ones + zeros + threes + zeros + twos + zeros + ones +
+#                     zeros + threes + zeros + twos + zeros + ones + zeros + threes + zeros + twos)
+# combinations.append(zeros + twos + zeros + ones + zeros + threes + zeros + twos +
+#                     zeros + ones + zeros + threes + zeros + twos + zeros + ones + zeros + threes)
+# combinations.append(zeros + twos + zeros + threes + zeros + ones + zeros + twos +
+#                     zeros + threes + zeros + ones + zeros + twos + zeros + threes + zeros + ones)
+# combinations.append(zeros + threes + zeros + ones + zeros + twos + zeros + threes +
+#                     zeros + ones + zeros + twos + zeros + threes + zeros + ones + zeros + twos)
+# combinations.append(zeros + threes + zeros + twos + zeros + ones + zeros + threes +
+#                     zeros + twos + zeros + ones + zeros + threes + zeros + twos + zeros + ones)
+
+
+# # Scenario 3
+# #   - Normal operation for 480 samples
+# #   - Fault 3 for 300 samples
+# #   - Fault 1 for 300 samplels
+# #   - Fault 2 for 300 samples
+# # Repeated twice times
+# combinations = []
+# zeros = [0] * 480
+# ones = [1] * 300
+# twos = [2] * 300
+# threes = [3] * 300
+# combinations.append(zeros + ones + twos + threes)
+# combinations.append(zeros + ones + threes + twos)
+# combinations.append(zeros + twos + ones + threes)
+# combinations.append(zeros + twos + threes + ones)
+# combinations.append(zeros + threes + ones + twos)
+# combinations.append(zeros + threes + twos + ones)
+
+
+# zeros = [1] * 480
+# ones = [0] * 300
+# twos = [2] * 300
+# threes = [3] * 300
+# combinations.append(zeros + ones + twos + threes)
+# combinations.append(zeros + ones + threes + twos)
+# combinations.append(zeros + twos + ones + threes)
+# combinations.append(zeros + twos + threes + ones)
+# combinations.append(zeros + threes + ones + twos)
+# combinations.append(zeros + threes + twos + ones)
+
+
+# zeros = [2] * 480
+# ones = [1] * 300
+# twos = [0] * 300
+# threes = [3] * 300
+# combinations.append(zeros + ones + twos + threes)
+# combinations.append(zeros + ones + threes + twos)
+# combinations.append(zeros + twos + ones + threes)
+# combinations.append(zeros + twos + threes + ones)
+# combinations.append(zeros + threes + ones + twos)
+# combinations.append(zeros + threes + twos + ones)
+
+# zeros = [3] * 480
+# ones = [1] * 300
+# twos = [2] * 300
+# threes = [0] * 300
+# combinations.append(zeros + ones + twos + threes)
+# combinations.append(zeros + ones + threes + twos)
+# combinations.append(zeros + twos + ones + threes)
+# combinations.append(zeros + twos + threes + ones)
+# combinations.append(zeros + threes + ones + twos)
+# combinations.append(zeros + threes + twos + ones)
+
+
+bestAccuracy = 0
+# k = 8
+
+trainingData = pd.read_csv("FaultLabeller/Data/Scenario5withLabels.csv")
+trainingData = trainingData.drop(
+    trainingData.columns[[0]], axis=1)  # Remove extra columns
+
+testData = pd.read_csv("FaultLabeller/Data/Scenario3withLabels.csv")
+testData = testData.drop(testData.columns[[0]], axis=1)  # Remove extra columns
+correctLabels = testData.iloc[:, -1]
+# print(correctLabels)
+# Remove extra columns
+testData = testData.drop(testData.columns[[-1]], axis=1)
+
+# data = performPCA(data, 15)
+
+startTime = time.time()
+# autoencoder = createAutoencoder(data)
+NN = trainNeuralNetwork(trainingData)
+predictLabels = useNeuralNetwork(testData, NN)
+
+endTime = time.time() - startTime
 # # data = performPCA(data, 3)
-eps = findKneePoint(data, k)
-predictedLabels = performDBSCAN(data, eps+0.1, k)
+# eps = findKneePoint(data, k)
+# predictedLabels = performDBSCAN(data, eps+0.1, k)
 # predictedLabels = performKMeans(data, 4)
 # print(eps)
 
 
-for c in combinations:
-    agreed_elements = 0
-    for item1, item2 in zip(predictedLabels, c):
-        if item1 == item2:
-            agreed_elements += 1
+# for c in combinations:
+#     agreed_elements = 0
+#     for item1, item2 in zip(predictedLabels, c):
+#         if item1 == item2:
+#             agreed_elements += 1
 
-    accuracy_percentage = (agreed_elements / len(c)) * 100
+#     accuracy_percentage = (agreed_elements / len(c)) * 100
 
-    if accuracy_percentage > bestAccuracy:
-        bestAccuracy = accuracy_percentage
+#     if accuracy_percentage > bestAccuracy:
+#         bestAccuracy = accuracy_percentage
 
 
-print('Accuracy: %:', bestAccuracy)
+score = 0
+
+
+for i in range(len(predictLabels)):
+    if predictLabels[i] == correctLabels[i]:
+        score += 1
+
+accuracy = score / len(predictLabels) * 100
+print('Accuracy = ', accuracy)
+
+print('Time:', endTime)
 #
