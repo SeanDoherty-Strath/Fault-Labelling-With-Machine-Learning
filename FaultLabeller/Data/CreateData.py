@@ -38,7 +38,7 @@ newDF.to_csv(filepath)
 
 labels = [1]*480 + [2]*480 + [1]*480 + [3]*480 + [1]*480 + [4]*480
 print(labels)
-newDF['correctLabels'] = labels
+newDF['primaryFault'] = labels
 filepath = Path('FaultLabeller/Data/Scenario1withLabels.csv')
 newDF.to_csv(filepath)
 
@@ -80,7 +80,7 @@ filepath = Path('FaultLabeller/Data/Scenario2.csv')
 newDF.to_csv(filepath)
 
 labels = [1]*100 + [2]*20 + [1]*100 + [3]*20 + [1]*100 + [4]*20
-newDF['correctLabels'] = labels*3
+newDF['primaryFault'] = labels*3
 filepath = Path('FaultLabeller/Data/Scenario2withLabels.csv')
 newDF.to_csv(filepath)
 
@@ -115,8 +115,8 @@ print(newDF.shape)
 filepath = Path('FaultLabeller/Data/Scenario3.csv')
 newDF.to_csv(filepath)
 
-labels = [1]*480 + [4]*300 + [2]*300 + [3]*300
-newDF['correctLabels'] = labels*2
+labels = [1]*480 + [5]*300 + [6]*300 + [7]*300
+newDF['primaryFault'] = labels*2
 filepath = Path('FaultLabeller/Data/Scenario3withLabels.csv')
 newDF.to_csv(filepath)
 
@@ -152,7 +152,7 @@ filepath = Path('FaultLabeller/Data/Scenario4.csv')
 newDF.to_csv(filepath)
 
 labels = [1]*480 + [2]*480 + [3]*480 + [4]*480
-newDF['correctLabels'] = labels*3
+newDF['primaryFault'] = labels*3
 filepath = Path('FaultLabeller/Data/Scenario4withLabels.csv')
 newDF.to_csv(filepath)
 

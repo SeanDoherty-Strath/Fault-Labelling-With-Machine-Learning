@@ -1,6 +1,7 @@
 import InternalLibraries.Components as Components
 from dash import html
 import InternalLibraries.Styles as Styles
+import dash_core_components as dcc
 
 mainLayout = html.Div(style=Styles.window, children=[
 
@@ -33,6 +34,8 @@ mainLayout = html.Div(style=Styles.window, children=[
                 html.Div(style=Styles.Box2Container, children=[
                     Components.labelTitle,
                     Components.labelDropdown,
+                    dcc.Checklist(id='replaceAddLabels', options=['Replace Labels', 'Add Label'],  style={
+                        'fontSize': 20, 'margin': 10, 'display': 'block'}, inline=True, labelStyle={'width': '50%'}),
                     html.Button(id='labelButton', style=Styles.labelButton),
                     html.Button('Remove Labels', id='removeLabels',
                                 style=Styles.removeLabels),

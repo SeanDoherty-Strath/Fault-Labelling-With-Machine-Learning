@@ -34,6 +34,7 @@ from InternalLibraries.Layout import mainLayout
 
 # Global Variables
 data = pd.DataFrame()
+secondaryLabels = pd.DataFrame()
 comments = pd.DataFrame()
 classifierNeuralNetwork = tf.keras.models.load_model(
     "FaultLabeller/NeuralNetworks/multiclassNeuralNetwork")
@@ -88,9 +89,11 @@ def exportCSV(exportClicked, fileName, includeCommentsButton):
 
         # Remove undesired data
         exportData = data.drop(columns=['clusterLabels'])
-        exportData = exportData.rename(columns={'labels': 'correctLabels'})
+        exportData = exportData.rename(columns={'labels': 'primaryFault'})
+        exportData = exportData.rename(columns={'secondary': 'secondaryFault'})
+        exportData = exportData.rename(columns={'tertiary': 'tertiaryFault'})
 
-        if includeCommentsButton % 2 == 0:
+        if includeCommentsButton % 2 == 0 and not comments.empty:
             exportData['commentMessage'] = comments.loc[:, 'commentMessage']
             exportData['commentTime'] = comments.loc[:, 'commentTime']
             exportData['commentUser'] = comments.loc[:, 'commentUser']
@@ -160,10 +163,23 @@ def uploadData(contents, filename):
             if 'Unnamed: 0' in data.columns:
                 data = data.rename(columns={'Unnamed: 0': 'Time'})
 
-            if 'correctLabels' in data.columns:
-                data = data.rename(columns={'correctLabels': 'labels'})
+            data['secondary'] = [0]*data.shape[0]
+            data['tertiary'] = [0]*data.shape[0]
+
+            if 'primaryFault' in data.columns:
+                print('yes!')
+                data = data.rename(columns={'primaryFault': 'labels'})
             else:
                 data['labels'] = data['labels'] = [0]*data.shape[0]
+
+            if 'secondaryFault' in data.columns:
+                data = data.rename(columns={'secondaryFault': 'secondary'})
+            else:
+                data['secondary'] = [0]*data.shape[0]
+            if 'tertiaryFault' in data.columns:
+                data = data.rename(columns={'tertiaryFault': 'tertiary'})
+            else:
+                data['tertiary'] = [0]*data.shape[0]
 
             data['clusterLabels'] = [0]*data.shape[0]
 
@@ -180,7 +196,19 @@ def uploadData(contents, filename):
         raise PreventUpdate
 
 
+# This function updates the replace / add labels button
+@app.callback(Output('replaceAddLabels', 'value'),
+              Input('replaceAddLabels', 'value'),
+              )
+def updateAddLabels(contents):
+    if contents == ['Replace Labels'] or contents == ['Replace Labels', 'Add Label'] or contents == ['Add Label', 'Replace Labels']:
+        return ['Replace Labels']
+    else:
+        return ['Add Label']
+
 # This function updates the neural network with new training data
+
+
 @app.callback(Output('mainGraph', 'figure', allow_duplicate=True),
               Input(Components.uploadTrainingData, 'contents'),
               prevent_initial_call=True
@@ -208,7 +236,7 @@ def updateNeuralNetwork(contents):
             if 'Time' in trainingData.columns:
                 trainingData.drop(columns=['Time'], inplace=True)
 
-            if 'labels' not in trainingData.columns and 'correctLabels' not in trainingData.columns:
+            if 'labels' not in trainingData.columns and 'primaryFault' not in trainingData.columns:
                 raise PreventUpdate
 
             classifierNeuralNetwork = trainNeuralNetwork(trainingData)
@@ -255,7 +283,7 @@ def updateAutoencoder(n_clicks):
 )
 def autoLabelOptions(startAutoLabelClicks):
 
-    if startAutoLabelClicks == None or data.empty:
+    if startAutoLabelClicks == None or startAutoLabelClicks == 0 or data.empty:
         raise PreventUpdate
     dropdowns = []
 
@@ -330,10 +358,10 @@ def autoLabelOptions(startAutoLabelClicks):
 )
 def colorLabels(colorNow, area0, area1, area2, area3, area4, area5, area6, area7, area8, area9, figure, relayoutData, switchView, alert2div):
     # try:
-    if colorNow == None or colorNow == 0:
-        return 0, ClusterColourContainer, alert2div, alertMessage
-    else:
-
+    # if colorNow == None or colorNow == 0:
+    #     return 0, {'display': 'none'}, alert2div, ""
+    # else:
+    if colorNow == 1:
         global x_0
         global x_1
         alert2div['display'] = 'none'
@@ -365,6 +393,8 @@ def colorLabels(colorNow, area0, area1, area2, area3, area4, area5, area6, area7
         ClusterColourContainer = {'display': 'none'}
 
         return 0, ClusterColourContainer, alert2div, alertMessage
+    else:
+        raise PreventUpdate
     # except Exception as e:
     #     print(f"An error occurred: {e}")
     #     raise PreventUpdate
@@ -698,10 +728,11 @@ def toggle_modal(openModal, closeModal, addComments, commentInput, usernameInput
     State(Components.minPtsSlider, 'value'),
     State('alert2div', 'style'),
     State('alert2', 'children'),
+    State('replaceAddLabels', 'value'),
     prevent_initial_call=True,
 
 )
-def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButtonClicks, removeLabelClick, findPrevClicked, findNextClicked, faultFinder, clickData, xAxis_dropdown_3D, yAxis_dropdown_3D, zAxis_dropdown_3D, newAutoLabel,  colorNow, switchRepresentation, sensorChecklist, clusterMethod, reductionMethod, relayoutData, K, reducedSize, eps, minVal, alert2div, alert2):
+def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButtonClicks, removeLabelClick, findPrevClicked, findNextClicked, faultFinder, clickData, xAxis_dropdown_3D, yAxis_dropdown_3D, zAxis_dropdown_3D, newAutoLabel,  colorNow, switchRepresentation, sensorChecklist, clusterMethod, reductionMethod, relayoutData, K, reducedSize, eps, minVal, alert2div, alert2, replaceAddLabel):
     try:
         global shapes
         global colours
@@ -782,7 +813,38 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
                     if (x1 > data.shape[0]):
                         x1 = data.shape[0]
 
-                    data['labels'][x0:x1] = [labelDropdown] * (x1-x0)
+                    if replaceAddLabel == ['Add Label'] and labelDropdown != 0 and labelDropdown != 1:
+                        # if (1):
+                        primarySet = set(
+                            data['labels'][x0:x1].values.flatten())
+                        secondarySet = set(
+                            data['secondary'][x0:x1].values.flatten())
+                        tertiarySet = set(
+                            data['tertiary'][x0:x1].values.flatten())
+
+                        # if all values are 0 or 1 in primary, repalce primary labels and remove secondary/teriary
+                        if all(val == 0 or val == 1 or val == labelDropdown for val in primarySet):
+                            # all values are 0 or 1
+                            data['labels'][x0:x1] = [labelDropdown] * (x1-x0)
+                        # if there is already a fault in primary, then check secondary does not already cotnans a fault
+                        elif all(val == 0 or val == labelDropdown for val in secondarySet):
+                            data['secondary'][x0:x1] = [
+                                labelDropdown] * (x1-x0)
+                        #  if theres already a fault in secondary, add it to tertriary
+                        elif all(val == 0 for val in tertiarySet):
+                            print('got here maybe')
+                            data['tertiary'][x0:x1] = [labelDropdown] * (x1-x0)
+                            print(data['tertiary'][x0:x1])
+                        #  else, all the labels are full and an error should be thrown
+                        else:
+                            alert2div['display'] = 'flex'
+                            alert2 = 'You have placed the maximum number of fault labels.'
+                        # HANDLE LOGIC
+                        # data['secondary'][x0:x1] = [labelDropdown] * (x1-x0)
+                    else:
+                        data['labels'][x0:x1] = [labelDropdown] * (x1-x0)
+                        data['secondary'][x0:x1] = [0] * (x1-x0)
+                        data['tertiary'][x0:x1] = [0] * (x1-x0)
 
             elif (labelButtonClicks % 2 == 1):   # i.e. a label is about to be added
 
@@ -893,10 +955,22 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
                             df = performPCA(df, reducedSize)
 
                     elif (reductionMethod == 'Auto-encoding'):
+                        df = data
+                        if 'Unnamed: 0' in df.columns:
+                            df.drop(columns=['Unnamed: 0'], inplace=True)
+                        if 'Time' in df.columns:
+                            df.drop(columns=['Time'], inplace=True)
+                        if 'secondary' in df.columns:
+                            df.drop(columns=['secondary'], inplace=True)
+                        if 'tertiary' in df.columns:
+                            df.drop(columns=['tertiary'], inplace=True)
+                        if 'labels' in df.columns:
+                            df.drop(columns=['labels'], inplace=True)
+                        if 'clusterLabels' in df.columns:
+                            df.drop(columns=['clusterLabels'], inplace=True)
 
-                        latentSpace = autoencoderNeuralNetwork.predict(
-                            data.iloc[:, 1:-2])
-                        print(data.iloc[:, 1:-2])
+                        latentSpace = autoencoderNeuralNetwork.predict(df)
+
                         df = pd.DataFrame(data=latentSpace)
 
                     if (clusterMethod == 'K Means'):
@@ -944,12 +1018,18 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
             if (removeLabelClick == 1):
                 data['labels'] = [0]*data.shape[0]
                 data['clusterLabels'] = [0]*data.shape[0]
+                data['secondary'] = [0]*data.shape[0]
+                data['tertiary'] = [0]*data.shape[0]
 
             # Go through labels and shown all the shapes
             shapes = []
             x0 = 0
             x1 = x0
-
+            x0_sec = 0
+            x1_sec = x0_sec
+            x0_ter = 0
+            x1_ter = x0_ter
+            print('got here no problem')
             if 'labels' in data.columns:
                 for i in range(1, len(data['labels'])):
 
@@ -970,6 +1050,41 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
                         },)
 
                         x0 = i
+                    if data['secondary'][i] != data['secondary'][i-1]:
+
+                        x1_sec = i
+                        print('got here no probken 2')
+                        if data.loc[x0_sec, 'secondary'] != 0:
+                            shapes.append({
+                                'type': 'rect',
+                                'x0': x0_sec,
+                                'x1': x1_sec,
+                                'y0': 0.05,
+                                'y1': 0.1,
+                                'fillcolor': Styles.colours[int(data.loc[x0_sec, 'secondary'])][0],
+                                'yref': 'paper',
+                                'opacity': 1,
+                                'name': str(data['secondary'][x0_sec])
+                            },)
+
+                        x0_sec = i
+                    if data['tertiary'][i] != data['tertiary'][i-1]:
+
+                        x1_ter = i
+                        if data.loc[x0_ter, 'tertiary'] != 0:
+                            shapes.append({
+                                'type': 'rect',
+                                'x0': x0_ter,
+                                'x1': x1_ter,
+                                'y0': 0.1,
+                                'y1': 0.15,
+                                'fillcolor': Styles.colours[int(data.loc[x0_ter, 'tertiary'])][0],
+                                'yref': 'paper',
+                                'opacity': 1,
+                                'name': str(data['tertiary'][x0_ter])
+                            },)
+
+                        x0_ter = i
 
                 shapes.append({
                     'type': 'rect',
@@ -982,6 +1097,32 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
                     'opacity': 1,
                     'name': str(data['labels'][x0])
                 },)
+                print('got her e2')
+                if data.loc[x0_sec, 'secondary'] != 0:
+                    print('got her 3')
+                    shapes.append({
+                        'type': 'rect',
+                        'x0': x0_sec,
+                        'x1': len(data['secondary']),
+                        'y0': 0.05,
+                        'y1': 0.1,
+                        'fillcolor': Styles.colours[int(data.loc[x0_sec, 'secondary'])][0],
+                        'yref': 'paper',
+                        'opacity': 1,
+                        'name': str(data['secondary'][x0_sec])
+                    },)
+                if data.loc[x0_ter, 'tertiary'] != 0:
+                    shapes.append({
+                        'type': 'rect',
+                        'x0': x0_ter,
+                        'x1': len(data['tertiary']),
+                        'y0': 0.1,
+                        'y1': 0.15,
+                        'fillcolor': Styles.colours[int(data.loc[x0_ter, 'tertiary'])][0],
+                        'yref': 'paper',
+                        'opacity': 1,
+                        'name': str(data['tertiary'][x0_ter])
+                    },)
 
                 if len(set(data['clusterLabels'])) != 1:
                     for i in range(1, len(data['clusterLabels'])):
@@ -1085,10 +1226,23 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
                             df = performPCA(df, reducedSize)
 
                     elif (reductionMethod == 'Auto-encoding'):
+                        df = data
+                        if 'Unnamed: 0' in df.columns:
+                            df.drop(columns=['Unnamed: 0'], inplace=True)
+                        if 'Time' in df.columns:
+                            df.drop(columns=['Time'], inplace=True)
+                        if 'secondary' in df.columns:
+                            df.drop(columns=['secondary'], inplace=True)
+                        if 'tertiary' in df.columns:
+                            df.drop(columns=['tertiary'], inplace=True)
+                        if 'labels' in df.columns:
+                            df.drop(columns=['labels'], inplace=True)
+                        if 'clusterLabels' in df.columns:
+                            df.drop(columns=['clusterLabels'], inplace=True)
 
                         latentSpace = autoencoderNeuralNetwork.predict(
-                            data.iloc[:, 1:-2])
-                        print(data.iloc[:, 1:-2])
+                            df)
+
                         df = pd.DataFrame(data=latentSpace)
 
                     if (clusterMethod == 'K Means'):
@@ -1191,9 +1345,20 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
                             df = performPCA(df, reducedSize)
 
                     elif (reductionMethod == 'Auto-encoding'):
-
-                        latentSpace = autoencoderNeuralNetwork.predict(
-                            data.iloc[:, 1:-2])
+                        df = data
+                        if 'Unnamed: 0' in df.columns:
+                            df.drop(columns=['Unnamed: 0'], inplace=True)
+                        if 'Time' in df.columns:
+                            df.drop(columns=['Time'], inplace=True)
+                        if 'secondary' in df.columns:
+                            df.drop(columns=['secondary'], inplace=True)
+                        if 'tertiary' in df.columns:
+                            df.drop(columns=['tertiary'], inplace=True)
+                        if 'labels' in df.columns:
+                            df.drop(columns=['labels'], inplace=True)
+                        if 'clusterLabels' in df.columns:
+                            df.drop(columns=['clusterLabels'], inplace=True)
+                        latentSpace = autoencoderNeuralNetwork.predict(df)
                         print(data.iloc[:, 1:-2])
                         df = pd.DataFrame(data=latentSpace)
 
