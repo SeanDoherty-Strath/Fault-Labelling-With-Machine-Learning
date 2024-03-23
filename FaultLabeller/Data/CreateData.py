@@ -122,41 +122,6 @@ newDF.to_csv(filepath)
 
 
 # Scenario 4
-#   - Normal operation for 1440 samples
-#   - Fault 2 for 256 samples
-#   - Normal operation for 2160 samplels
-#   - Fault 1  for 256 samples
-# - Fault 3 for 256 samples
-
-
-newDF = pd.DataFrame()
-
-faultyOffset = 30000
-
-
-newDF = newDF._append(FaultFreeData.iloc[faultyOffset:faultyOffset+1440, :])
-newDF = newDF._append(
-    FaultyData.iloc[faultyOffset+20+500:faultyOffset+20+500+256], ignore_index=True)
-newDF = newDF._append(
-    FaultFreeData.iloc[faultyOffset+1440:faultyOffset+1440+2160, :])
-newDF = newDF._append(
-    FaultyData.iloc[faultyOffset+20:faultyOffset+20+256], ignore_index=True)
-newDF = newDF._append(
-    FaultyData.iloc[faultyOffset+20+500*5:faultyOffset+20+256+500*5], ignore_index=True)
-
-
-newDF = newDF.drop(data.columns[[0, 1, 2]], axis=1)  # Remove extra columns
-print(newDF.shape)
-# expected 4368
-filepath = Path('FaultLabeller/Data/Scenario4.csv')
-newDF.to_csv(filepath)
-
-newDF['correctLabels'] = [1]*1440 + [3]*256 + [1]*2160 + [2]*256 + [3]*256
-filepath = Path('FaultLabeller/Data/Scenario4withLabels.csv')
-newDF.to_csv(filepath)
-
-
-# Scenario 5
 #   - Normal operation for 480 samples
 #   - Fault 1 for 480 samples
 #   - Fault 2  for 480 samples
@@ -183,10 +148,26 @@ for i in range(0, 3):
 newDF = newDF.drop(data.columns[[0, 1, 2]], axis=1)  # Remove extra columns
 print(newDF.shape)
 # expected 25760
-filepath = Path('FaultLabeller/Data/Scenario5.csv')
+filepath = Path('FaultLabeller/Data/Scenario4.csv')
 newDF.to_csv(filepath)
 
 labels = [1]*480 + [2]*480 + [3]*480 + [4]*480
 newDF['correctLabels'] = labels*3
-filepath = Path('FaultLabeller/Data/Scenario5withLabels.csv')
+filepath = Path('FaultLabeller/Data/Scenario4withLabels.csv')
+newDF.to_csv(filepath)
+
+
+# 20 000 data points
+
+newDF = pd.DataFrame()
+newDF = newDF._append(FaultFreeData.iloc[0:20000], ignore_index=True)
+filepath = Path('FaultLabeller/Data/20000_datapoints.csv')
+newDF.to_csv(filepath)
+
+
+# 10 000 data points
+
+newDF = pd.DataFrame()
+newDF = newDF._append(FaultFreeData.iloc[0:10000], ignore_index=True)
+filepath = Path('FaultLabeller/Data/10000_datapoints.csv')
 newDF.to_csv(filepath)

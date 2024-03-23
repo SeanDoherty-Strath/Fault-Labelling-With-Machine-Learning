@@ -179,7 +179,7 @@ def trainNeuralNetwork(trainingData):
 
     # Define the model
     model = Sequential([
-        Dense(64, activation='relu', input_shape=(
+        Dense(64, activation='elu', input_shape=(
             inputSize,)),  # 4 input features
         Dense(outputSize, activation='softmax')
     ])
@@ -189,10 +189,10 @@ def trainNeuralNetwork(trainingData):
                   loss='categorical_crossentropy',
                   metrics=['accuracy'])
     # Train the model
-    # early_stopping = EarlyStopping(
-    #     monitor='val_loss', patience=10, verbose=1, restore_best_weights=True)
+    early_stopping = EarlyStopping(
+        monitor='val_loss', patience=10, verbose=1, restore_best_weights=True)
     model.fit(X_train, y_train, epochs=50, batch_size=32,
-              validation_data=(X_test, y_test))
+              validation_data=(X_test, y_test), callbacks=[early_stopping])
 
     return model
 
@@ -222,94 +222,99 @@ def testDBSCAN(predictedLabels):
     # - Normal operation 100 samples
     #   - Fault 3 for 20 samples
     #   - Repeated three times
-    combinations = []
+    # combinations = []
 
-    zeros = [0] * 100
-    ones = [1] * 20
-    twos = [2] * 20
-    threes = [3] * 20
+    # zeros = [0] * 100
+    # ones = [1] * 20
+    # twos = [2] * 20
+    # threes = [3] * 20
 
-    combinations.append(zeros + ones + zeros + twos + zeros + threes + zeros + ones +
-                        zeros + twos + zeros + threes + zeros + ones + zeros + twos + zeros + threes)
-    combinations.append(zeros + ones + zeros + threes + zeros + twos + zeros + ones +
-                        zeros + threes + zeros + twos + zeros + ones + zeros + threes + zeros + twos)
-    combinations.append(zeros + twos + zeros + ones + zeros + threes + zeros + twos +
-                        zeros + ones + zeros + threes + zeros + twos + zeros + ones + zeros + threes)
-    combinations.append(zeros + twos + zeros + threes + zeros + ones + zeros + twos +
-                        zeros + threes + zeros + ones + zeros + twos + zeros + threes + zeros + ones)
-    combinations.append(zeros + threes + zeros + ones + zeros + twos + zeros + threes +
-                        zeros + ones + zeros + twos + zeros + threes + zeros + ones + zeros + twos)
-    combinations.append(zeros + threes + zeros + twos + zeros + ones + zeros + threes +
-                        zeros + twos + zeros + ones + zeros + threes + zeros + twos + zeros + ones)
+    # combinations.append(zeros + ones + zeros + twos + zeros + threes + zeros + ones +
+    #                     zeros + twos + zeros + threes + zeros + ones + zeros + twos + zeros + threes)
+    # combinations.append(zeros + ones + zeros + threes + zeros + twos + zeros + ones +
+    #                     zeros + threes + zeros + twos + zeros + ones + zeros + threes + zeros + twos)
+    # combinations.append(zeros + twos + zeros + ones + zeros + threes + zeros + twos +
+    #                     zeros + ones + zeros + threes + zeros + twos + zeros + ones + zeros + threes)
+    # combinations.append(zeros + twos + zeros + threes + zeros + ones + zeros + twos +
+    #                     zeros + threes + zeros + ones + zeros + twos + zeros + threes + zeros + ones)
+    # combinations.append(zeros + threes + zeros + ones + zeros + twos + zeros + threes +
+    #                     zeros + ones + zeros + twos + zeros + threes + zeros + ones + zeros + twos)
+    # combinations.append(zeros + threes + zeros + twos + zeros + ones + zeros + threes +
+    #                     zeros + twos + zeros + ones + zeros + threes + zeros + twos + zeros + ones)
 
-    zeros = [1] * 100
-    ones = [0] * 20
-    twos = [2] * 20
-    threes = [3] * 20
+    # zeros = [1] * 100
+    # ones = [0] * 20
+    # twos = [2] * 20
+    # threes = [3] * 20
 
-    combinations.append(zeros + ones + zeros + twos + zeros + threes + zeros + ones +
-                        zeros + twos + zeros + threes + zeros + ones + zeros + twos + zeros + threes)
-    combinations.append(zeros + ones + zeros + threes + zeros + twos + zeros + ones +
-                        zeros + threes + zeros + twos + zeros + ones + zeros + threes + zeros + twos)
-    combinations.append(zeros + twos + zeros + ones + zeros + threes + zeros + twos +
-                        zeros + ones + zeros + threes + zeros + twos + zeros + ones + zeros + threes)
-    combinations.append(zeros + twos + zeros + threes + zeros + ones + zeros + twos +
-                        zeros + threes + zeros + ones + zeros + twos + zeros + threes + zeros + ones)
-    combinations.append(zeros + threes + zeros + ones + zeros + twos + zeros + threes +
-                        zeros + ones + zeros + twos + zeros + threes + zeros + ones + zeros + twos)
-    combinations.append(zeros + threes + zeros + twos + zeros + ones + zeros + threes +
-                        zeros + twos + zeros + ones + zeros + threes + zeros + twos + zeros + ones)
+    # combinations.append(zeros + ones + zeros + twos + zeros + threes + zeros + ones +
+    #                     zeros + twos + zeros + threes + zeros + ones + zeros + twos + zeros + threes)
+    # combinations.append(zeros + ones + zeros + threes + zeros + twos + zeros + ones +
+    #                     zeros + threes + zeros + twos + zeros + ones + zeros + threes + zeros + twos)
+    # combinations.append(zeros + twos + zeros + ones + zeros + threes + zeros + twos +
+    #                     zeros + ones + zeros + threes + zeros + twos + zeros + ones + zeros + threes)
+    # combinations.append(zeros + twos + zeros + threes + zeros + ones + zeros + twos +
+    #                     zeros + threes + zeros + ones + zeros + twos + zeros + threes + zeros + ones)
+    # combinations.append(zeros + threes + zeros + ones + zeros + twos + zeros + threes +
+    #                     zeros + ones + zeros + twos + zeros + threes + zeros + ones + zeros + twos)
+    # combinations.append(zeros + threes + zeros + twos + zeros + ones + zeros + threes +
+    #                     zeros + twos + zeros + ones + zeros + threes + zeros + twos + zeros + ones)
 
-    zeros = [2] * 100
-    ones = [1] * 20
-    twos = [0] * 20
-    threes = [3] * 20
+    # zeros = [2] * 100
+    # ones = [1] * 20
+    # twos = [0] * 20
+    # threes = [3] * 20
 
-    combinations.append(zeros + ones + zeros + twos + zeros + threes + zeros + ones +
-                        zeros + twos + zeros + threes + zeros + ones + zeros + twos + zeros + threes)
-    combinations.append(zeros + ones + zeros + threes + zeros + twos + zeros + ones +
-                        zeros + threes + zeros + twos + zeros + ones + zeros + threes + zeros + twos)
-    combinations.append(zeros + twos + zeros + ones + zeros + threes + zeros + twos +
-                        zeros + ones + zeros + threes + zeros + twos + zeros + ones + zeros + threes)
-    combinations.append(zeros + twos + zeros + threes + zeros + ones + zeros + twos +
-                        zeros + threes + zeros + ones + zeros + twos + zeros + threes + zeros + ones)
-    combinations.append(zeros + threes + zeros + ones + zeros + twos + zeros + threes +
-                        zeros + ones + zeros + twos + zeros + threes + zeros + ones + zeros + twos)
-    combinations.append(zeros + threes + zeros + twos + zeros + ones + zeros + threes +
-                        zeros + twos + zeros + ones + zeros + threes + zeros + twos + zeros + ones)
+    # combinations.append(zeros + ones + zeros + twos + zeros + threes + zeros + ones +
+    #                     zeros + twos + zeros + threes + zeros + ones + zeros + twos + zeros + threes)
+    # combinations.append(zeros + ones + zeros + threes + zeros + twos + zeros + ones +
+    #                     zeros + threes + zeros + twos + zeros + ones + zeros + threes + zeros + twos)
+    # combinations.append(zeros + twos + zeros + ones + zeros + threes + zeros + twos +
+    #                     zeros + ones + zeros + threes + zeros + twos + zeros + ones + zeros + threes)
+    # combinations.append(zeros + twos + zeros + threes + zeros + ones + zeros + twos +
+    #                     zeros + threes + zeros + ones + zeros + twos + zeros + threes + zeros + ones)
+    # combinations.append(zeros + threes + zeros + ones + zeros + twos + zeros + threes +
+    #                     zeros + ones + zeros + twos + zeros + threes + zeros + ones + zeros + twos)
+    # combinations.append(zeros + threes + zeros + twos + zeros + ones + zeros + threes +
+    #                     zeros + twos + zeros + ones + zeros + threes + zeros + twos + zeros + ones)
 
-    zeros = [3] * 100
-    ones = [1] * 20
-    twos = [2] * 20
-    threes = [0] * 20
+    # zeros = [3] * 100
+    # ones = [1] * 20
+    # twos = [2] * 20
+    # threes = [0] * 20
 
-    combinations.append(zeros + ones + zeros + twos + zeros + threes + zeros + ones +
-                        zeros + twos + zeros + threes + zeros + ones + zeros + twos + zeros + threes)
-    combinations.append(zeros + ones + zeros + threes + zeros + twos + zeros + ones +
-                        zeros + threes + zeros + twos + zeros + ones + zeros + threes + zeros + twos)
-    combinations.append(zeros + twos + zeros + ones + zeros + threes + zeros + twos +
-                        zeros + ones + zeros + threes + zeros + twos + zeros + ones + zeros + threes)
-    combinations.append(zeros + twos + zeros + threes + zeros + ones + zeros + twos +
-                        zeros + threes + zeros + ones + zeros + twos + zeros + threes + zeros + ones)
-    combinations.append(zeros + threes + zeros + ones + zeros + twos + zeros + threes +
-                        zeros + ones + zeros + twos + zeros + threes + zeros + ones + zeros + twos)
-    combinations.append(zeros + threes + zeros + twos + zeros + ones + zeros + threes +
-                        zeros + twos + zeros + ones + zeros + threes + zeros + twos + zeros + ones)
+    # combinations.append(zeros + ones + zeros + twos + zeros + threes + zeros + ones +
+    #                     zeros + twos + zeros + threes + zeros + ones + zeros + twos + zeros + threes)
+    # combinations.append(zeros + ones + zeros + threes + zeros + twos + zeros + ones +
+    #                     zeros + threes + zeros + twos + zeros + ones + zeros + threes + zeros + twos)
+    # combinations.append(zeros + twos + zeros + ones + zeros + threes + zeros + twos +
+    #                     zeros + ones + zeros + threes + zeros + twos + zeros + ones + zeros + threes)
+    # combinations.append(zeros + twos + zeros + threes + zeros + ones + zeros + twos +
+    #                     zeros + threes + zeros + ones + zeros + twos + zeros + threes + zeros + ones)
+    # combinations.append(zeros + threes + zeros + ones + zeros + twos + zeros + threes +
+    #                     zeros + ones + zeros + twos + zeros + threes + zeros + ones + zeros + twos)
+    # combinations.append(zeros + threes + zeros + twos + zeros + ones + zeros + threes +
+    #                     zeros + twos + zeros + ones + zeros + threes + zeros + twos + zeros + ones)
 
-    bestAccuracy = 0
+    # bestAccuracy = 0
 
-    # testData = pd.read_csv("FaultLabeller/Data/Scenario1withLabels.csv")
-    # correctLabels = testData.iloc[:, -1]
+    testData = pd.read_csv("FaultLabeller/Data/Scenario3withLabels.csv")
+    correctLabels = testData.iloc[:, -1]
 
-    for c in combinations:
-        agreed_elements = 0
-        for item1, item2 in zip(predictedLabels, c):
-            if item1 == item2:
-                agreed_elements += 1
+    score = 0
 
-        accuracy_percentage = (agreed_elements / len(c)) * 100
+    for i in range(len(correctLabels)):
+        if correctLabels[i] == predictedLabels[i]:
+            score += 1
+    print('ACCURACY: ', score / len(correctLabels))
 
-        if accuracy_percentage > bestAccuracy:
-            bestAccuracy = accuracy_percentage
+    # for c in combinations:
+    #     agreed_elements = 0
+    #     for item1, item2 in zip(predictedLabels, c):
+    #         if item1 == item2:
+    #             agreed_elements += 1
 
-    print('ACCURACY: ', bestAccuracy)
+    #     accuracy_percentage = (agreed_elements / len(c)) * 100
+
+    #     if accuracy_percentage > bestAccuracy:
+    #         bestAccuracy = accuracy_percentage

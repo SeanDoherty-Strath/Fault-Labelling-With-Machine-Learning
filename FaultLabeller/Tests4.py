@@ -44,7 +44,7 @@ def performAutoEncoding(data, n):
     xTrain = trainingData.sample(frac=0.8, random_state=42)
     xTest = trainingData.drop(xTrain.index)
 
-    num_epochs = 50
+    num_epochs = 200
 
     losses = []
     epochs = []
@@ -87,6 +87,24 @@ def performAutoEncoding(data, n):
                         validation_data=(xTest, xTest), callbacks=[LossHistory()])
         predictedData = autoencoder.predict(data)
         mae = mean_absolute_error(data, predictedData)  # mean absolute error
+
+        fig, ax1 = plt.subplots()
+
+        color = 'tab:red'
+        ax1.set_xlabel('Epochs')
+        ax1.set_ylabel('Error', color=color)
+        ax1.plot(epochs, losses, color=color, label='Training Loss')
+        ax1.tick_params(axis='y', labelcolor=color)
+        # ax2 = ax1.twinx()  # instantiate a second axes that shares the same x-axis
+        # color = 'tab:blue'
+        # # we already handled the x-label with ax1
+        # ax2.set_ylabel('Time (s)', color=color)
+        # ax2.plot(epochs, times, color=color, label='Training Time')    # ax2.tick_params(axis='y', labelcolor=color)
+
+        fig.tight_layout()  # otherwise the right y-label is slightly clipped
+        fig.legend()
+        plt.show()
+
         return mae, times[-1]/50
     if n == 3:
         input_layer = keras.Input(shape=(52,))
@@ -134,23 +152,27 @@ labels = np.random.rand(3, 3)  # Generate random data for demonstration
 # df = pd.DataFrame(labels, columns=optimization)
 # df.iloc[:, :] = 0
 
-timeArray = []
-accuracyArray = []
+# timeArray = []
+# accuracyArray = []
 
-for n in range(5):
-    accuracy = 0.0
-    times = 0.0
-    for i in range(5):
-        tempAccuracy, tempTime = performAutoEncoding(data, n)
-        accuracy += tempAccuracy
-        times += tempTime
-    accuracy /= 5
-    times /= 5
-    accuracyArray.append(accuracy)
-    timeArray.append(times)
+tempAccuracy, tempTime = performAutoEncoding(data, 1)
+#         accuracy += tempAccuracy
 
-print(accuracyArray)
-print(timeArray)
+
+# for n in range(5):
+#     accuracy = 0.0
+#     times = 0.0
+#     for i in range(5):
+#         tempAccuracy, tempTime = performAutoEncoding(data, n)
+#         accuracy += tempAccuracy
+#         times += tempTime
+#     accuracy /= 5
+#     times /= 5
+#     accuracyArray.append(accuracy)
+# #     timeArray.append(times)
+
+# print(accuracyArray)
+# print(timeArray)
 
 
 # for i in range(len(optimization)):

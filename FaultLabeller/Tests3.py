@@ -117,15 +117,15 @@ def peformNN(trainingData, n):
 
     # Train the model
     history = model.fit(X_train, y_train, epochs=50, batch_size=32,
-                        validation_data=(X_test, y_test), verbose=0, callbacks=[loss_history])
+                        validation_data=(X_test, y_test), callbacks=[loss_history])
 
-    # fig, ax1 = plt.subplots()
+    fig, ax1 = plt.subplots()
 
-    # color = 'tab:red'
-    # ax1.set_xlabel('Epochs')
-    # ax1.set_ylabel('Catergorical Crossentropoy', color=color)
-    # ax1.plot(epochs, losses, color=color, label='Training Loss')
-    # ax1.tick_params(axis='y', labelcolor=color)
+    color = 'tab:red'
+    ax1.set_xlabel('Epochs')
+    ax1.set_ylabel('Catergorical Crossentropoy', color=color)
+    ax1.plot(epochs, losses, color=color, label='Training Loss')
+    ax1.tick_params(axis='y', labelcolor=color)
     # ax2 = ax1.twinx()  # instantiate a second axes that shares the same x-axis
     # color = 'tab:blue'
     # # we already handled the x-label with ax1
@@ -133,9 +133,9 @@ def peformNN(trainingData, n):
     # ax2.plot(epochs, times, color=color, label='Training Time')
     # ax2.tick_params(axis='y', labelcolor=color)
 
-    # fig.tight_layout()  # otherwise the right y-label is slightly clipped
-    # fig.legend()
-    # plt.show()
+    fig.tight_layout()  # otherwise the right y-label is slightly clipped
+    fig.legend()
+    plt.show()
 
     # THEN TEST PERFORMANCE
     testData = pd.read_csv("FaultLabeller/Data/Scenario5withLabels.csv")
@@ -170,25 +170,26 @@ def peformNN(trainingData, n):
     print("\nClassification Report:")
     print(classification_report(actualLabels, predictedLabels))
 
-    # # Visualize confusion matrix
-    # labels = ['No Fault', 'Fault 1', 'Fault 2', 'Fault 3']
-    # plt.figure(figsize=(8, 6))
-    # plt.imshow(conf_matrix, interpolation='nearest', cmap=plt.cm.Blues)
-    # plt.title('Confusion Matrix')
-    # plt.colorbar()
-    # tick_marks = np.arange(len(labels))
-    # plt.xticks(tick_marks, labels, rotation=45)
-    # plt.yticks(tick_marks, labels)
-    # plt.ylabel('True label')
-    # plt.xlabel('Predicted label')
-    # plt.tight_layout()
+    # Visualize confusion matrix
+    labels = ['No Fault', 'Fault 1', 'Fault 2', 'Fault 3']
+    plt.figure(figsize=(8, 6))
+    plt.imshow(conf_matrix, interpolation='nearest', cmap=plt.cm.Blues)
+    plt.title('Confusion Matrix')
+    plt.colorbar()
+    tick_marks = np.arange(len(labels))
+    plt.xticks(tick_marks, labels, rotation=45)
+    plt.yticks(tick_marks, labels)
+    plt.ylabel('True label')
+    plt.xlabel('Predicted label')
+    plt.tight_layout()
 
+    plt.show()
     accuracy = accuracy_score(actualLabels, predictedLabels)
     print('Accuracy = ', accuracy)
     return accuracy, times[-1]/50
 
 
-trainingData = pd.read_csv("FaultLabeller/Data/Scenario1withLabels.csv")
+trainingData = pd.read_csv("FaultLabeller/Data/Scenario5withLabels.csv")
 
 trainingData = trainingData.drop(
     trainingData.columns[[0]], axis=1)  # Remove extra columns
@@ -203,20 +204,22 @@ trainingData = trainingData.drop(
 accuracyList = []
 timeList = []
 
-for n in range(6):
-    accuracy = 0.0
-    times = 0.0
-    for i in range(5):
-        tempAccuracy, tempTime = peformNN(trainingData, n)
-        accuracy += tempAccuracy
-        times += tempTime
-    accuracy /= 5
-    times /= 5
-    accuracyList.append(accuracy)
-    timeList.append(times)
+tempAccuracy, tempTime = peformNN(trainingData, 1)
 
-print(accuracyList)
-print(timeList)
+# for n in range(6):
+#     accuracy = 0.0
+#     times = 0.0
+#     for i in range(5):
+#         tempAccuracy, tempTime = peformNN(trainingData, n)
+#         accuracy += tempAccuracy
+#         times += tempTime
+#     accuracy /= 5
+#     times /= 5
+#     accuracyList.append(accuracy)
+#     timeList.append(times)
+
+# print(accuracyList)
+# print(timeList)
 
 
 # for i in range(len(optimization)):

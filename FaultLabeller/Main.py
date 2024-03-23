@@ -331,7 +331,7 @@ def autoLabelOptions(startAutoLabelClicks):
 def colorLabels(colorNow, area0, area1, area2, area3, area4, area5, area6, area7, area8, area9, figure, relayoutData, switchView, alert2div):
     # try:
     if colorNow == None or colorNow == 0:
-        raise PreventUpdate
+        return 0, ClusterColourContainer, alert2div, alertMessage
     else:
 
         global x_0
@@ -358,6 +358,8 @@ def colorLabels(colorNow, area0, area1, area2, area3, area4, area5, area6, area7
                         data.loc[i, 'labels'] = 0
                     else:
                         data.loc[i, 'labels'] = areas[j]
+
+        testDBSCAN(data.loc[:, 'labels'])
 
         data['clusterLabels'] = [0]*data.shape[0]
         ClusterColourContainer = {'display': 'none'}
@@ -927,7 +929,7 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
                             else:
                                 data['labels'] = [0]*data.shape[0]
                                 data['clusterLabels'] = temp
-                                testDBSCAN(data['clusterLabels'])
+
                                 ClusterColourContainer = {
                                     'display': 'block', 'width': 200, 'padding': 20}
                     elif (clusterMethod == 'Neural Network (Supervised)'):
