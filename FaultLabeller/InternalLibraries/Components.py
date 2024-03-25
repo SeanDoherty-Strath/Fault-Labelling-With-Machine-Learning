@@ -1,9 +1,7 @@
 import dash_core_components as dcc
 import pandas as pd
 import plotly.express as px
-import plotly.graph_objs as go
 from dash import html
-import dash_bootstrap_components as dbc
 import InternalLibraries.Styles as Styles
 
 # Placeholder data
@@ -66,12 +64,12 @@ commentModal = html.Div(
         'position': 'absolute',
         'top': '50%',
         'left': '50%',
-                'transform': 'translate(-50%, -50%)',
-                'background-color': 'white',
-                'padding': '20px',
-                'border-radius': '10px',
-                'box-shadow': '0px 0px 10px 0px rgba(0,0,0,0.75)',
-                'z-index': '9999'  # Ensures this div overlays other components
+        'transform': 'translate(-50%, -50%)',
+        'background-color': 'white',
+        'padding': '20px',
+        'border-radius': '9px',
+        'box-shadow': '0px 0px 10px 0px rgba(0,0,0,0.74)',
+                'z-index': '9000'
     },
     children=[
         dcc.Markdown("Comments"),
@@ -100,7 +98,7 @@ alertTwoContainer = html.Div(children=[html.Div(id='alert2div',
                                                     'padding': '20px',
                                                     'border-radius': '10px',
                                                     'box-shadow': '0px 0px 10px 0px rgba(0,0,0,0.75)',
-                                                    'z-index': '9999',  # Ensures this div overlays other components
+                                                    'z-index': '9000',
                                                     'flex-direction': 'column',
                                                     'align-items': 'center',
                                                     'justify-content': 'center'
@@ -305,7 +303,7 @@ epsSlider = dcc.Slider(min=0, max=5,  marks={i: str(
     i) for i in range(0, 5)}, step=0.1, value=0.1)
 
 AI_text13 = dcc.Markdown('Min Value:', style={
-                         'margin-left': 10, 'width': '50%', 'display': 'none'})
+                         'margin-left': 10, 'width': '50%', 'display': 'block'})
 
 minPtsSlider = dcc.Slider(min=1, max=60,  marks={i: str(
     i) for i in range(0, 60, 5)}, step=1, value=9)

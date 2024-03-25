@@ -11,15 +11,11 @@ import numpy as np
 import keras
 from keras import layers
 import pandas as pd
-import time
-
-
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import OneHotEncoder
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense
 import pandas as pd
-import tensorflow as tf
 from tensorflow.keras.callbacks import EarlyStopping
 
 
@@ -34,11 +30,8 @@ def performKMeans(df, k):
     kmeans = KMeans(n_clusters=k, n_init="auto")
     kmeans.fit(data)
 
-    # Get centoids and reutn labels
-    labelArray = kmeans.labels_
-    labels = labelArray.tolist()
-
-    return labels
+    # Return Labels
+    return kmeans.labels_.tolist()
 
 
 # Tune DBSCAN Parameters
@@ -48,24 +41,20 @@ def findKneePoint(df, k):
     scaler = StandardScaler()
     normalizedValues = scaler.fit_transform(df)
 
-    # Find k nearest neighborus
-    nearestNeighbours = NearestNeighbors(n_neighbors=k)
-    nearestNeighbours.fit(normalizedValues)
-
-    # calculate euclidian distance to k neighbors
-    distances, _ = nearestNeighbours.kneighbors(normalizedValues)
-    averageDistances = np.mean(distances, axis=1)
-
-    #  sort into ascending order
-    sortDistances = np.sort(averageDistances)
+    # Create K Plot using neurest neighbours
+    NN = NearestNeighbors(n_neighbors=k)
+    NN.fit(normalizedValues)
+    eucDistancec, _ = NN.eucDistancec(normalizedValues)  # use euc distance
+    avgEucDiistance = np.mean(eucDistancec, axis=1)
+    sortedEucDistance = np.sort(avgEucDiistance)  # Go into ascendng order
 
     # Calculate cdf
-    cdf = np.cumsum(sortDistances)
+    cdf = np.cumsum(sortedEucDistance)
     cdf /= cdf[-1]
 
-    # find knee point - which corresponds to optimal value of EPS
-    kneePointsIndex = np.argmax(cdf >= 0.9)
-    eps = sortDistances[kneePointsIndex]
+    # find knee point (corresponds to optimal value of epsiilon)
+    kneedPointIndex = np.argmax(cdf >= 0.9)
+    eps = sortedEucDistance[kneedPointIndex]
 
     return eps
 
@@ -78,11 +67,10 @@ def performDBSCAN(df, eps, minVal):
     # Perform DBSCAN
     dbscan = DBSCAN(eps=eps, min_samples=minVal)
     dbscan.fit(normalizedData)
-    labels = dbscan.labels_.tolist()
 
     # print('Number of labels from DBSCAN ', len(set(labels)))
 
-    return labels
+    return dbscan.labels_.tolist()
 
 
 # FEATURE REDUCTION FUNCTIONS
@@ -92,10 +80,8 @@ def performPCA(df, n):
     scaler = StandardScaler()
     scaledData = scaler.fit_transform(df)
 
-    # Peroform PCA
+    # Perform PCA PCA
     pca = PCA(n_components=n)
-
-    # Keep principal components
     principalComponents = pca.fit_transform(scaledData)
 
     # Create a new data frame
@@ -112,19 +98,16 @@ def createAutoencoder(df):
     # Standardize data
     scaler = StandardScaler()
     normalizedData = scaler.fit_transform(df)
+    trainingData = pd.DataFrame(normalizedData, columns=df.columns)
 
-    # Create new df with the normalized values
-    trainingData = pd.DataFrame(
-        normalizedData, columns=df.columns)
-
-    length = trainingData.shape[1]
-
-    # Define the dimensions
-    inputOutputDimensions = length
+    # Set layer dimensions
+    nInputs = trainingData.shape[1]
+    inputOutputDimensions = nInputs
     # Hidden layer is approx. half the previous
-    hiddenLayerDimensions = round(length/2)
+    hiddenLayerDimensions = round(nInputs/2)
     encodingDimensions = 8
 
+    # Build Autoencoder
     inputLayer = keras.Input(shape=(inputOutputDimensions,))
     encoder = layers.Dense(hiddenLayerDimensions,
                            activation='relu')(inputLayer)
@@ -134,60 +117,44 @@ def createAutoencoder(df):
     outputLayer = layers.Dense(
         inputOutputDimensions, activation='linear')(decoder)
 
-    # AUTOENCODER
+    # Create & Traun Autoencoder
     autoencoder = keras.Model(inputs=inputLayer, outputs=outputLayer)
-
-    # COMPILE MODEL
     autoencoder.compile(optimizer='adam', loss='mse')
-
-    # note: Don't do cross fold valdiation, for time efficiency
     xTrain = trainingData.sample(frac=0.8, random_state=42)
     xTest = trainingData.drop(xTrain.index)
-
-    early_stopping = EarlyStopping(
-        monitor='mse', patience=10, verbose=1, restore_best_weights=True)
-
     autoencoder.fit(xTrain, xTrain, epochs=50, shuffle=True,
-                    validation_data=(xTest, xTest), callbacks=[early_stopping])
+                    validation_data=(xTest, xTest))
 
+    # Pass data to Bottleneck
     bottleneck = keras.Model(inputs=autoencoder.input,
                              outputs=autoencoder.get_layer('dense_1').output)
-
-    # latentSpace = bottleneck.predict(normalizedData)
-    # bottleneckDF = pd.DataFrame(data=latentSpace)
-    # return bottleneckDF
-
     return bottleneck
 
 
 def trainNeuralNetwork(trainingData):
+    # Inputs
     X = trainingData.iloc[:, :-1]
-    y = trainingData.iloc[:, -1]
-    y = np.array(y)
-
-    print('got here 2')
     inputSize = X.shape[1]
-    outputSize = len(set(y))
 
-    # One-hot encode the target labels
-    encoder = OneHotEncoder(sparse=False)
+    # Outputs
+    y = np.array(trainingData.iloc[:, -1])
+    outputSize = len(set(y))
+    encoder = OneHotEncoder(sparse=False)  # One-Hot Encoder
     y = encoder.fit_transform(y.reshape(-1, 1))
 
-    # Split the dataset into training and testing sets
+    # Split randomly into train & test
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=0.2, random_state=42)
 
     # Define the model
     model = Sequential([
-        Dense(64, activation='elu', input_shape=(
-            inputSize,)),  # 4 input features
+        Dense(64, activation='elu', input_shape=(inputSize,)),
         Dense(outputSize, activation='softmax')
     ])
 
     # Compile the model
-    model.compile(optimizer='adam',  # Use categorical crossentropy for one-hot encoded labels
-                  loss='categorical_crossentropy',
-                  metrics=['accuracy'])
+    model.compile(optimizer='adam',
+                  loss='categorical_crossentropy', metrics=['accuracy'])
     # Train the model
     early_stopping = EarlyStopping(
         monitor='val_loss', patience=10, verbose=1, restore_best_weights=True)
@@ -211,94 +178,9 @@ def useNeuralNetwork(df, classifierNeuralNetwork):
     return roundedLabels
 
 
-def testDBSCAN(predictedLabels):
-    # DATA
-
-    # Scenario 2
-    #   - Normal operation 100 samples
-    #   - Fault 1 for 20 samples
-    #   - Normal operation 100 samples
-    #   - Fault 2 for 20 samples
-    # - Normal operation 100 samples
-    #   - Fault 3 for 20 samples
-    #   - Repeated three times
-    # combinations = []
-
-    # zeros = [0] * 100
-    # ones = [1] * 20
-    # twos = [2] * 20
-    # threes = [3] * 20
-
-    # combinations.append(zeros + ones + zeros + twos + zeros + threes + zeros + ones +
-    #                     zeros + twos + zeros + threes + zeros + ones + zeros + twos + zeros + threes)
-    # combinations.append(zeros + ones + zeros + threes + zeros + twos + zeros + ones +
-    #                     zeros + threes + zeros + twos + zeros + ones + zeros + threes + zeros + twos)
-    # combinations.append(zeros + twos + zeros + ones + zeros + threes + zeros + twos +
-    #                     zeros + ones + zeros + threes + zeros + twos + zeros + ones + zeros + threes)
-    # combinations.append(zeros + twos + zeros + threes + zeros + ones + zeros + twos +
-    #                     zeros + threes + zeros + ones + zeros + twos + zeros + threes + zeros + ones)
-    # combinations.append(zeros + threes + zeros + ones + zeros + twos + zeros + threes +
-    #                     zeros + ones + zeros + twos + zeros + threes + zeros + ones + zeros + twos)
-    # combinations.append(zeros + threes + zeros + twos + zeros + ones + zeros + threes +
-    #                     zeros + twos + zeros + ones + zeros + threes + zeros + twos + zeros + ones)
-
-    # zeros = [1] * 100
-    # ones = [0] * 20
-    # twos = [2] * 20
-    # threes = [3] * 20
-
-    # combinations.append(zeros + ones + zeros + twos + zeros + threes + zeros + ones +
-    #                     zeros + twos + zeros + threes + zeros + ones + zeros + twos + zeros + threes)
-    # combinations.append(zeros + ones + zeros + threes + zeros + twos + zeros + ones +
-    #                     zeros + threes + zeros + twos + zeros + ones + zeros + threes + zeros + twos)
-    # combinations.append(zeros + twos + zeros + ones + zeros + threes + zeros + twos +
-    #                     zeros + ones + zeros + threes + zeros + twos + zeros + ones + zeros + threes)
-    # combinations.append(zeros + twos + zeros + threes + zeros + ones + zeros + twos +
-    #                     zeros + threes + zeros + ones + zeros + twos + zeros + threes + zeros + ones)
-    # combinations.append(zeros + threes + zeros + ones + zeros + twos + zeros + threes +
-    #                     zeros + ones + zeros + twos + zeros + threes + zeros + ones + zeros + twos)
-    # combinations.append(zeros + threes + zeros + twos + zeros + ones + zeros + threes +
-    #                     zeros + twos + zeros + ones + zeros + threes + zeros + twos + zeros + ones)
-
-    # zeros = [2] * 100
-    # ones = [1] * 20
-    # twos = [0] * 20
-    # threes = [3] * 20
-
-    # combinations.append(zeros + ones + zeros + twos + zeros + threes + zeros + ones +
-    #                     zeros + twos + zeros + threes + zeros + ones + zeros + twos + zeros + threes)
-    # combinations.append(zeros + ones + zeros + threes + zeros + twos + zeros + ones +
-    #                     zeros + threes + zeros + twos + zeros + ones + zeros + threes + zeros + twos)
-    # combinations.append(zeros + twos + zeros + ones + zeros + threes + zeros + twos +
-    #                     zeros + ones + zeros + threes + zeros + twos + zeros + ones + zeros + threes)
-    # combinations.append(zeros + twos + zeros + threes + zeros + ones + zeros + twos +
-    #                     zeros + threes + zeros + ones + zeros + twos + zeros + threes + zeros + ones)
-    # combinations.append(zeros + threes + zeros + ones + zeros + twos + zeros + threes +
-    #                     zeros + ones + zeros + twos + zeros + threes + zeros + ones + zeros + twos)
-    # combinations.append(zeros + threes + zeros + twos + zeros + ones + zeros + threes +
-    #                     zeros + twos + zeros + ones + zeros + threes + zeros + twos + zeros + ones)
-
-    # zeros = [3] * 100
-    # ones = [1] * 20
-    # twos = [2] * 20
-    # threes = [0] * 20
-
-    # combinations.append(zeros + ones + zeros + twos + zeros + threes + zeros + ones +
-    #                     zeros + twos + zeros + threes + zeros + ones + zeros + twos + zeros + threes)
-    # combinations.append(zeros + ones + zeros + threes + zeros + twos + zeros + ones +
-    #                     zeros + threes + zeros + twos + zeros + ones + zeros + threes + zeros + twos)
-    # combinations.append(zeros + twos + zeros + ones + zeros + threes + zeros + twos +
-    #                     zeros + ones + zeros + threes + zeros + twos + zeros + ones + zeros + threes)
-    # combinations.append(zeros + twos + zeros + threes + zeros + ones + zeros + twos +
-    #                     zeros + threes + zeros + ones + zeros + twos + zeros + threes + zeros + ones)
-    # combinations.append(zeros + threes + zeros + ones + zeros + twos + zeros + threes +
-    #                     zeros + ones + zeros + twos + zeros + threes + zeros + ones + zeros + twos)
-    # combinations.append(zeros + threes + zeros + twos + zeros + ones + zeros + threes +
-    #                     zeros + twos + zeros + ones + zeros + threes + zeros + twos + zeros + ones)
-
-    # bestAccuracy = 0
-
-    testData = pd.read_csv("FaultLabeller/Data/Scenario3withLabels.csv")
+def testAccuracy(predictedLabels):
+    # Read in the test scenario
+    testData = pd.read_csv("FaultLabeller/Data/Scenario1withLabels.csv")
     correctLabels = testData.iloc[:, -1]
 
     score = 0
@@ -307,14 +189,3 @@ def testDBSCAN(predictedLabels):
         if correctLabels[i] == predictedLabels[i]:
             score += 1
     print('ACCURACY: ', score / len(correctLabels))
-
-    # for c in combinations:
-    #     agreed_elements = 0
-    #     for item1, item2 in zip(predictedLabels, c):
-    #         if item1 == item2:
-    #             agreed_elements += 1
-
-    #     accuracy_percentage = (agreed_elements / len(c)) * 100
-
-    #     if accuracy_percentage > bestAccuracy:
-    #         bestAccuracy = accuracy_percentage

@@ -12,11 +12,7 @@ import pandas as pd
 from dash.exceptions import PreventUpdate
 import numpy as np
 
-# External Libraries for ML
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import OneHotEncoder
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense
+# External Libraries for Data handling
 import pandas as pd
 import tensorflow as tf
 
@@ -27,14 +23,13 @@ import io
 import base64
 
 # Internal Libraries
-from InternalLibraries.ML_Functions import performKMeans, performPCA, performDBSCAN, findKneePoint, createAutoencoder, trainNeuralNetwork, useNeuralNetwork, testDBSCAN
+from InternalLibraries.ML_Functions import performKMeans, performPCA, performDBSCAN, findKneePoint, createAutoencoder, trainNeuralNetwork, useNeuralNetwork, testAccuracy
 import InternalLibraries.Styles as Styles
 import InternalLibraries.Components as Components
 from InternalLibraries.Layout import mainLayout
 
 # Global Variables
 data = pd.DataFrame()
-secondaryLabels = pd.DataFrame()
 comments = pd.DataFrame()
 classifierNeuralNetwork = tf.keras.models.load_model(
     "FaultLabeller/NeuralNetworks/multiclassNeuralNetwork")
@@ -43,7 +38,6 @@ autoencoderNeuralNetwork = tf.keras.models.load_model(
 shapes = []  # An array which stores rectangles, to visualise labels in the time domain
 navigationPoint = 0  # current navigation point
 clickedPoint = None  # The current clicked point
-
 x_0 = 0  # What proportion of the time graph is shown
 x_1 = 5000
 
@@ -53,8 +47,9 @@ app = dash.Dash(__name__)
 # Define the layout
 app.layout = mainLayout
 
-
 # This function limits sensors to 4 at a time
+
+
 @app.callback(
     Output(Components.sensorDropdown, 'value', allow_duplicate=True),
     Input(Components.sensorDropdown, 'value'),
@@ -69,8 +64,9 @@ def limitSensor(values):
 
     return values
 
-
 # This function exports data to a downloadable csv
+
+
 @app.callback(
     Output('downloadData', 'data'),
     Input(Components.exportConfirm, 'n_clicks'),
@@ -103,8 +99,9 @@ def exportCSV(exportClicked, fileName, includeCommentsButton):
     except Exception as e:
         raise PreventUpdate
 
-
 # This function updates the 'add comments' button
+
+
 @app.callback(
     Output(Components.includeCommentsButton, 'children'),
     Input(Components.includeCommentsButton, 'n_clicks'),
@@ -118,7 +115,7 @@ def includeComments(nClicks):
     if nClicks % 2 == 1:
         return 'Include Comments: No'
 
-    #  This function uploads data to the dashboard
+#  This function uploads data to the dashboard
 
 
 @app.callback(Output(Components.title, 'children'),
@@ -145,9 +142,10 @@ def uploadData(contents, filename):
         global comments
 
         if contents is not None:
-            content_type, content_string = contents.split(',')
-            decoded = io.StringIO(base64.b64decode(
-                content_string).decode('utf-8'))
+            #  split content
+            contentType, content = contents.split(',')
+            # decode data
+            decoded = io.StringIO(base64.b64decode(content).decode('utf-8'))
             data = pd.read_csv(decoded)
 
             comments = pd.DataFrame()
@@ -162,12 +160,7 @@ def uploadData(contents, filename):
 
             if 'Unnamed: 0' in data.columns:
                 data = data.rename(columns={'Unnamed: 0': 'Time'})
-
-            data['secondary'] = [0]*data.shape[0]
-            data['tertiary'] = [0]*data.shape[0]
-
             if 'primaryFault' in data.columns:
-                print('yes!')
                 data = data.rename(columns={'primaryFault': 'labels'})
             else:
                 data['labels'] = data['labels'] = [0]*data.shape[0]
@@ -195,8 +188,9 @@ def uploadData(contents, filename):
     except Exception as e:
         raise PreventUpdate
 
-
 # This function updates the replace / add labels button
+
+
 @app.callback(Output('replaceAddLabels', 'value'),
               Input('replaceAddLabels', 'value'),
               )
@@ -211,21 +205,20 @@ def updateAddLabels(contents):
 
 @app.callback(Output('mainGraph', 'figure', allow_duplicate=True),
               Input(Components.uploadTrainingData, 'contents'),
-              prevent_initial_call=True
-              )
+              prevent_initial_call=True)
 def updateNeuralNetwork(contents):
-
+    global classifierNeuralNetwork
     try:
         if contents is not None:
-
             trainingData = pd.DataFrame()
             for i in range(0, len(contents)):
-                content_type, content_string = contents[i].split(',')
-                decoded = io.StringIO(base64.b64decode(
-                    content_string).decode('utf-8'))
-
+                # for each csv, split & decode data
+                contentType, content = contents[i].split(',')
+                decoded = io.StringIO(
+                    base64.b64decode(content).decode('utf-8'))
                 trainingData = trainingData._append(pd.read_csv(decoded))
 
+            # Drop unawanted columns, as a precuation
             if 'commentMessage' in trainingData.columns and 'commentTime' in trainingData.columns and 'commentUser' in trainingData.columns:
                 trainingData.drop(
                     columns=['commentMessage', 'commentTime', 'commentUser'], inplace=True)
@@ -236,20 +229,25 @@ def updateNeuralNetwork(contents):
             if 'Time' in trainingData.columns:
                 trainingData.drop(columns=['Time'], inplace=True)
 
+            if 'secondaryFault' in trainingData.columns:
+                trainingData.drop(columns=['secondaryFault'], inplace=True)
+
+            if 'tertiaryFault' in trainingData.columns:
+                trainingData.drop(columns=['tertiaryFault'], inplace=True)
+
             if 'labels' not in trainingData.columns and 'primaryFault' not in trainingData.columns:
                 raise PreventUpdate
 
             classifierNeuralNetwork = trainNeuralNetwork(trainingData)
-
+            print('neural network saved')
             classifierNeuralNetwork.save(
                 "FaultLabeller/NeuralNetworks/multiclassNeuralNetwork")
-
+        #  dont update the callabck
         raise PreventUpdate
     except Exception as e:
         raise PreventUpdate
 
-
-# This function trains the autoencoder
+# This function trains the autoencoder, using the file already in the software
 
 
 @app.callback(Output('mainGraph', 'figure'),
@@ -261,9 +259,9 @@ def updateAutoencoder(n_clicks):
         global autoencoderNeuralNetwork
 
         if n_clicks is not None:
-            trainingData = data
+            trainingData = data.iloc[:, :]
             trainingData.drop(
-                columns=['labels', 'Time', 'clusterLabels'], inplace=True)
+                columns=['labels', 'Time', 'clusterLabels', 'secondary', 'tertiary'], inplace=True)
 
             autoencoder = createAutoencoder(trainingData)
 
@@ -272,24 +270,24 @@ def updateAutoencoder(n_clicks):
 
         raise PreventUpdate
     except Exception as e:
-        print(f"An error occurred: {e}")
+
         raise PreventUpdate
 
-
 # This function display the dropdowns for colouring the data after the data has been autolabelled
+
+
 @app.callback(
     Output('ClusterColourContainer', 'children'),
     Input('startAutoLabel', 'n_clicks'),
 )
 def autoLabelOptions(startAutoLabelClicks):
 
-    if startAutoLabelClicks == None or startAutoLabelClicks == 0 or data.empty:
-        raise PreventUpdate
+    # if startAutoLabelClicks == None or startAutoLabelClicks == 0 or data.empty:
+    #     raise PreventUpdate
     dropdowns = []
-
     if 'clusterLabels' in data.columns:
         for i in range(len(set(data['clusterLabels']))):
-
+            print('i)')
             dropdowns.append(
                 dcc.Markdown('Area ' + str(i+1))
             )
@@ -312,7 +310,6 @@ def autoLabelOptions(startAutoLabelClicks):
                     ]
                 )
             )
-    if 'clusterLabels' in data.columns:
         for i in range(len(set(data['clusterLabels'])), 11):
             dropdowns.append(
                 dcc.Markdown('Area ' + str(i+1), style={'display': 'none'},)
@@ -325,15 +322,22 @@ def autoLabelOptions(startAutoLabelClicks):
                     options=[]
                 )
             )
+    else:
+        for i in range(11):
+            dropdowns.append(
+                dcc.Dropdown(
+                    id=f'dropdown-{i}',
+                )
+            )
     dropdowns.append(
         html.Button('Confirm Labels', id='colorNow', style={
                     'fontSize': 20, 'align-self': 'center', 'font-weight': 'bold', 'margin': 20})
     )
-
     return dropdowns
 
-
 # This function colours the graph with the users labels
+
+
 @app.callback(
     Output('colorNow', 'n_clicks'),
     Output('ClusterColourContainer', 'style', allow_duplicate=True),
@@ -354,14 +358,16 @@ def autoLabelOptions(startAutoLabelClicks):
     State('mainGraph', 'relayoutData'),
     State('switchView', 'n_clicks'),
     State('alert2div', 'style'),
+    State('ClusterColourContainer', 'style'),
     prevent_initial_call=True,
 )
-def colorLabels(colorNow, area0, area1, area2, area3, area4, area5, area6, area7, area8, area9, figure, relayoutData, switchView, alert2div):
-    # try:
-    # if colorNow == None or colorNow == 0:
-    #     return 0, {'display': 'none'}, alert2div, ""
-    # else:
-    if colorNow == 1:
+def colorLabels(colorNow, area0, area1, area2, area3, area4, area5, area6, area7, area8, area9, figure, relayoutData, switchView, alert2div, clusterColour):
+    if colorNow == None or colorNow == 0:
+        print('prevent udpate')
+        raise PreventUpdate
+
+    else:
+        print('here 1.2')
         global x_0
         global x_1
         alert2div['display'] = 'none'
@@ -370,15 +376,14 @@ def colorLabels(colorNow, area0, area1, area2, area3, area4, area5, area6, area7
             switchView = 0
         areas = [area0, area1, area2, area3, area4,
                  area5, area6, area7, area8, area9]
-
-        ClusterColourContainer = {'display': 'none'}
-
+        print('here 1.3')
         for i in range(len(set(data['clusterLabels']))):
+            print('here 1.24')
             if areas[i] == None:
 
                 alert2div['display'] = 'flex'
                 alertMessage = 'Not all dropdowns were full. Labelling may be wrong.'
-
+        print('here 1.5')
         for i in range(len(data['labels'])):
             for j in range(len(areas)):
                 if j == data['clusterLabels'][i]:
@@ -386,20 +391,15 @@ def colorLabels(colorNow, area0, area1, area2, area3, area4, area5, area6, area7
                         data.loc[i, 'labels'] = 0
                     else:
                         data.loc[i, 'labels'] = areas[j]
-
-        testDBSCAN(data.loc[:, 'labels'])
+        print('here 1.6')
+        testAccuracy(data.loc[:, 'labels'])
 
         data['clusterLabels'] = [0]*data.shape[0]
         ClusterColourContainer = {'display': 'none'}
 
         return 0, ClusterColourContainer, alert2div, alertMessage
-    else:
-        raise PreventUpdate
-    # except Exception as e:
-    #     print(f"An error occurred: {e}")
-    #     raise PreventUpdate
 
-# This function closes the alerts
+# this function allows the user to close alerts
 
 
 @app.callback(
@@ -433,8 +433,6 @@ def closeAlerts(alert1click, alert2click, alert1style, alert2style):
 
 
 # This callback tells the user what data point has been clicked
-
-
 @app.callback(
     Output('alert1div', 'style', allow_duplicate=True),
     Output('alert1', 'children'),
@@ -508,8 +506,9 @@ def selectDeselectAll(selectClicks, deselectClicks, graphSensors, sensorDropdown
     except Exception as e:
         raise PreventUpdate
 
-
 #  This function shows and hides clustering paratmeters
+
+
 @app.callback(
     Output(Components.K, 'style'),
     Output(Components.reducedSize, 'style'),
@@ -595,7 +594,6 @@ def autoLabelStyles(clusterMethod, reductionMethod, switchView, uploadTrainingDa
     Input('sensor-checklist', 'value'),
     Input('reducedSize', 'value'),
     Input(Components.reductionMethod, 'value')
-
 )
 def DBSCAN_parameterSelection(clusterMethod, sensorChecklist, reducedSize, reductionMethod):
     try:
@@ -609,7 +607,7 @@ def DBSCAN_parameterSelection(clusterMethod, sensorChecklist, reducedSize, reduc
             df = data.loc[:, sensorChecklist]
             eps = findKneePoint(df, 10)
         elif clusterMethod == 'DBSCAN' and sensorChecklist != [] and reductionMethod == 'Auto-encoding':
-            df = data
+            df = data.iloc[:, :]
             df = autoencoderNeuralNetwork.predict(df)
             eps = findKneePoint(df, 10)
 
@@ -682,8 +680,9 @@ def toggle_modal(openModal, closeModal, addComments, commentInput, usernameInput
     except Exception as e:
         raise PreventUpdate
 
-
 # This function performs the bulk of functionality: everything that uses the main graph as an output do with main graph
+
+
 @app.callback(
     Output('mainGraph', 'figure', allow_duplicate=True),
     Output('labelButton', 'children'),
@@ -839,8 +838,6 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
                         else:
                             alert2div['display'] = 'flex'
                             alert2 = 'You have placed the maximum number of fault labels.'
-                        # HANDLE LOGIC
-                        # data['secondary'][x0:x1] = [labelDropdown] * (x1-x0)
                     else:
                         data['labels'][x0:x1] = [labelDropdown] * (x1-x0)
                         data['secondary'][x0:x1] = [0] * (x1-x0)
@@ -955,7 +952,7 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
                             df = performPCA(df, reducedSize)
 
                     elif (reductionMethod == 'Auto-encoding'):
-                        df = data
+                        df = data.loc[:, :]
                         if 'Unnamed: 0' in df.columns:
                             df.drop(columns=['Unnamed: 0'], inplace=True)
                         if 'Time' in df.columns:
@@ -983,6 +980,7 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
                         else:
                             data['labels'] = [0]*data.shape[0]
                             data['clusterLabels'] = performKMeans(df, K)
+                            print('show cluster colours')
                             ClusterColourContainer = {
                                 'display': 'block', 'width': 200, 'padding': 20}
 
@@ -1007,10 +1005,16 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
                                 ClusterColourContainer = {
                                     'display': 'block', 'width': 200, 'padding': 20}
                     elif (clusterMethod == 'Neural Network (Supervised)'):
-                        df = data.iloc[:, 1:-2]
+                        df = data.iloc[:, :]
+                        df.drop(columns=['clusterLabels'], inplace=True)
+                        df.drop(columns=['labels'], inplace=True)
+                        df.drop(columns=['secondary'], inplace=True)
+                        df.drop(columns=['tertiary'], inplace=True)
+                        df.drop(columns=['Time'], inplace=True)
 
                         data['labels'] = useNeuralNetwork(
                             df, classifierNeuralNetwork)
+                        testAccuracy(data.loc[:, 'labels'])
                         data['clusterLabels'] = [0]*data.shape[0]
                     x_0 = 0
                     x_1 = data.shape[0]
@@ -1029,7 +1033,7 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
             x1_sec = x0_sec
             x0_ter = 0
             x1_ter = x0_ter
-            print('got here no problem')
+
             if 'labels' in data.columns:
                 for i in range(1, len(data['labels'])):
 
@@ -1210,7 +1214,6 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
                 dragMode = 'select'
 
             if (newAutoLabel == 1):  # i.e time to perform autoabelling
-                selectData = []
 
                 if (sensorChecklist == [] or sensorChecklist == None):
                     alert2div['display'] = 'flex'
@@ -1226,7 +1229,7 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
                             df = performPCA(df, reducedSize)
 
                     elif (reductionMethod == 'Auto-encoding'):
-                        df = data
+                        df = data.iloc[:, :]
                         if 'Unnamed: 0' in df.columns:
                             df.drop(columns=['Unnamed: 0'], inplace=True)
                         if 'Time' in df.columns:
@@ -1263,7 +1266,6 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
                             alert2div['display'] = 'flex'
                             alert2 = 'Incorrect parameter for eps or min points.'
                         else:
-                            n = len(sensorChecklist)
                             temp = performDBSCAN(df, eps, minVal)
                             if len(list(set(temp))) >= 10:
                                 alert2div['display'] = 'flex'
@@ -1278,7 +1280,12 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
                                 ClusterColourContainer = {
                                     'display': 'block', 'width': 200, 'padding': 20}
                     elif (clusterMethod == 'Neural Network (Supervised)'):
-                        df = data.iloc[:, 1:-2]
+                        df = data.iloc[:, :]
+                        df.drop(columns=['clusterLabels'], inplace=True)
+                        df.drop(columns=['labels'], inplace=True)
+                        df.drop(columns=['secondary'], inplace=True)
+                        df.drop(columns=['tertiary'], inplace=True)
+                        df.drop(columns=['Time'], inplace=True)
 
                         data['labels'] = useNeuralNetwork(
                             df, classifierNeuralNetwork)
@@ -1345,7 +1352,7 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
                             df = performPCA(df, reducedSize)
 
                     elif (reductionMethod == 'Auto-encoding'):
-                        df = data
+                        df = data.iloc[:, :]
                         if 'Unnamed: 0' in df.columns:
                             df.drop(columns=['Unnamed: 0'], inplace=True)
                         if 'Time' in df.columns:
@@ -1359,7 +1366,7 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
                         if 'clusterLabels' in df.columns:
                             df.drop(columns=['clusterLabels'], inplace=True)
                         latentSpace = autoencoderNeuralNetwork.predict(df)
-                        print(data.iloc[:, 1:-2])
+
                         df = pd.DataFrame(data=latentSpace)
 
                     if (clusterMethod == 'K Means'):
@@ -1395,7 +1402,12 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
                                 ClusterColourContainer = {
                                     'display': 'block', 'width': 200, 'padding': 20}
                     elif (clusterMethod == 'Neural Network (Supervised)'):
-                        df = data.iloc[:, 1:-2]
+                        df = data.iloc[:, :]
+                        df.drop(columns=['clusterLabels'], inplace=True)
+                        df.drop(columns=['labels'], inplace=True)
+                        df.drop(columns=['secondary'], inplace=True)
+                        df.drop(columns=['tertiary'], inplace=True)
+                        df.drop(columns=['Time'], inplace=True)
 
                         data['labels'] = useNeuralNetwork(
                             df, classifierNeuralNetwork)

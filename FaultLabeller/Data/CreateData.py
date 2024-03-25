@@ -115,7 +115,7 @@ print(newDF.shape)
 filepath = Path('FaultLabeller/Data/Scenario3.csv')
 newDF.to_csv(filepath)
 
-labels = [1]*480 + [5]*300 + [6]*300 + [7]*300
+labels = [1]*480 + [4]*300 + [2]*300 + [3]*300
 newDF['primaryFault'] = labels*2
 filepath = Path('FaultLabeller/Data/Scenario3withLabels.csv')
 newDF.to_csv(filepath)
