@@ -616,6 +616,7 @@ def DBSCAN_parameterSelection(clusterMethod, sensorChecklist, reducedSize, reduc
     Output("commentModal", 'children'),
     Output("addComment", "n_clicks"),
     Output('closeComments', 'n_clicks'),
+    Output('open-modal', 'n_clicks'),
 
     Input("open-modal", "n_clicks"),
     Input('closeComments', 'n_clicks'),
@@ -626,6 +627,10 @@ def DBSCAN_parameterSelection(clusterMethod, sensorChecklist, reducedSize, reduc
 )
 def toggle_modal(openModal, closeModal, addComments, commentInput, usernameInput, commentModalStyle):
     try:
+        if openModal == None:
+            openModal = 0
+        if closeModal == None:
+            closeModal = 0
 
         if openModal == 1:
             commentModalStyle['display'] = 'block'
@@ -667,7 +672,7 @@ def toggle_modal(openModal, closeModal, addComments, commentInput, usernameInput
             ),
         ),)
 
-        return commentModalStyle, modalChidren, 0, 0
+        return commentModalStyle, modalChidren, 0, 0, 0
     except Exception as e:
         raise PreventUpdate
 
