@@ -287,7 +287,6 @@ def autoLabelOptions(startAutoLabelClicks):
     dropdowns = []
     if 'clusterLabels' in data.columns:
         for i in range(len(set(data['clusterLabels']))):
-            print('i)')
             dropdowns.append(
                 dcc.Markdown('Area ' + str(i+1))
             )
@@ -363,11 +362,9 @@ def autoLabelOptions(startAutoLabelClicks):
 )
 def colorLabels(colorNow, area0, area1, area2, area3, area4, area5, area6, area7, area8, area9, figure, relayoutData, switchView, alert2div, clusterColour):
     if colorNow == None or colorNow == 0:
-        print('prevent udpate')
         raise PreventUpdate
 
     else:
-        print('here 1.2')
         global x_0
         global x_1
         alert2div['display'] = 'none'
@@ -376,14 +373,11 @@ def colorLabels(colorNow, area0, area1, area2, area3, area4, area5, area6, area7
             switchView = 0
         areas = [area0, area1, area2, area3, area4,
                  area5, area6, area7, area8, area9]
-        print('here 1.3')
         for i in range(len(set(data['clusterLabels']))):
-            print('here 1.24')
             if areas[i] == None:
 
                 alert2div['display'] = 'flex'
                 alertMessage = 'Not all dropdowns were full. Labelling may be wrong.'
-        print('here 1.5')
         for i in range(len(data['labels'])):
             for j in range(len(areas)):
                 if j == data['clusterLabels'][i]:
@@ -391,7 +385,6 @@ def colorLabels(colorNow, area0, area1, area2, area3, area4, area5, area6, area7
                         data.loc[i, 'labels'] = 0
                     else:
                         data.loc[i, 'labels'] = areas[j]
-        print('here 1.6')
         testAccuracy(data.loc[:, 'labels'])
 
         data['clusterLabels'] = [0]*data.shape[0]
@@ -428,7 +421,6 @@ def closeAlerts(alert1click, alert2click, alert1style, alert2style):
 
         return alert1style, alert2style, 0, 0
     except Exception as e:
-        print(f"An error occurred: {e}")
         raise PreventUpdate
 
 
@@ -601,7 +593,6 @@ def DBSCAN_parameterSelection(clusterMethod, sensorChecklist, reducedSize, reduc
             df = data.loc[:, sensorChecklist]
             df = performPCA(df, 10)
             eps = findKneePoint(df, 10)
-            print('got here')
             return 10, eps
         elif clusterMethod == 'DBSCAN' and sensorChecklist != [] and reductionMethod == 'None':
             df = data.loc[:, sensorChecklist]
@@ -831,9 +822,7 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
                                 labelDropdown] * (x1-x0)
                         #  if theres already a fault in secondary, add it to tertriary
                         elif all(val == 0 for val in tertiarySet):
-                            print('got here maybe')
                             data['tertiary'][x0:x1] = [labelDropdown] * (x1-x0)
-                            print(data['tertiary'][x0:x1])
                         #  else, all the labels are full and an error should be thrown
                         else:
                             alert2div['display'] = 'flex'
@@ -980,7 +969,6 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
                         else:
                             data['labels'] = [0]*data.shape[0]
                             data['clusterLabels'] = performKMeans(df, K)
-                            print('show cluster colours')
                             ClusterColourContainer = {
                                 'display': 'block', 'width': 200, 'padding': 20}
 
@@ -1057,7 +1045,6 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
                     if data['secondary'][i] != data['secondary'][i-1]:
 
                         x1_sec = i
-                        print('got here no probken 2')
                         if data.loc[x0_sec, 'secondary'] != 0:
                             shapes.append({
                                 'type': 'rect',
@@ -1101,9 +1088,7 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
                     'opacity': 1,
                     'name': str(data['labels'][x0])
                 },)
-                print('got her e2')
                 if data.loc[x0_sec, 'secondary'] != 0:
-                    print('got her 3')
                     shapes.append({
                         'type': 'rect',
                         'x0': x0_sec,

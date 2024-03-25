@@ -180,7 +180,7 @@ def useNeuralNetwork(df, classifierNeuralNetwork):
 
 def testAccuracy(predictedLabels):
     # Read in the test scenario
-    testData = pd.read_csv("FaultLabeller/Data/Scenario1withLabels.csv")
+    testData = pd.read_csv("FaultLabeller/Data/Scenario2withLabels.csv")
     correctLabels = testData.iloc[:, -1]
 
     score = 0
