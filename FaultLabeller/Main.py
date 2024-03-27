@@ -1311,7 +1311,7 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
 
             if clickedPoint is not None:
                 selectData.append(go.Scatter(x=[data[xAxis_dropdown_3D][clickedPoint]], y=[
-                    data[yAxis_dropdown_3D][clickedPoint]],  marker=dict(color='black', size=40)))
+                    data[yAxis_dropdown_3D][clickedPoint]],  marker=dict(color='black', size=20)))
 
         if (switchViewButtonClicks % 3 == 2):
             #  3D SCATTER PLOT
