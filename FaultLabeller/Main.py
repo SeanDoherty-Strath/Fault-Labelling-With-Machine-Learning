@@ -1426,7 +1426,7 @@ def updateGraph(sensorDropdown, labelDropdown, switchViewButtonClicks, labelButt
                 },)]
             if clickedPoint is not None:
                 selectData.append(go.Scatter3d(x=[data[xAxis_dropdown_3D][clickedPoint]], y=[
-                    data[yAxis_dropdown_3D][clickedPoint]], z=[data[zAxis_dropdown_3D][clickedPoint]], marker=dict(color='black', size=40)))
+                    data[yAxis_dropdown_3D][clickedPoint]], z=[data[zAxis_dropdown_3D][clickedPoint]], marker=dict(color='black', size=20)))
 
             sensorDropdownStyle = {'display': 'none'}
             layout = go.Layout(xaxis=dict(
